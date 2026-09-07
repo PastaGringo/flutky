@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../pubky/nexus.dart';
+import '../pubky/ring_session.dart';
 import '../theme.dart';
 import 'post_content.dart';
 import 'profile_sheet.dart';
@@ -18,6 +19,7 @@ class PostCard extends StatelessWidget {
     required this.post,
     required this.nexus,
     required this.profiles,
+    this.session,
     this.quoted,
     this.quotedAuthor,
     this.pending = false,
@@ -26,6 +28,9 @@ class PostCard extends StatelessWidget {
   final PubkyPost post;
   final NexusClient nexus;
   final Map<String, PubkyProfile> profiles;
+
+  /// Lets the profile sheet offer Follow. Absent, it stays read-only.
+  final RingSession? session;
 
   /// The post this one reposts or replies to, once loaded.
   final PubkyPost? quoted;
@@ -68,9 +73,13 @@ class PostCard extends StatelessWidget {
             author: author,
             name: name,
             nexus: nexus,
+            session: session,
             pending: pending,
           ),
-          if (post.content.isNotEmpty) ...[
+          if (post.article case final article?) ...[
+            const SizedBox(height: 12),
+            _Article(article: article),
+          ] else if (post.content.isNotEmpty) ...[
             const SizedBox(height: 12),
             PostContent(
               content: post.content,
@@ -124,6 +133,7 @@ class _Header extends StatelessWidget {
     required this.author,
     required this.name,
     required this.nexus,
+    required this.session,
     required this.pending,
   });
 
@@ -131,6 +141,7 @@ class _Header extends StatelessWidget {
   final PubkyProfile? author;
   final String name;
   final NexusClient nexus;
+  final RingSession? session;
   final bool pending;
 
   @override
@@ -145,6 +156,7 @@ class _Header extends StatelessWidget {
             nexus: nexus,
             pubky: post.author,
             known: author,
+            session: session,
           ),
           borderRadius: BorderRadius.circular(999),
           child: ClipOval(
@@ -406,4 +418,58 @@ class _Metric extends StatelessWidget {
           ],
         ),
       );
+}
+
+/// A `long` post: title plus a Markdown body, both packed as JSON inside the
+/// content field. The feed shows the title and an excerpt — a full Markdown
+/// render belongs on a detail screen, which does not exist yet, and pasting a
+/// whole article into a timeline card would drown the rest.
+class _Article extends StatelessWidget {
+  const _Article({required this.article});
+
+  final ({String title, String body}) article;
+
+  static const _excerptLines = 4;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = L10n.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          article.title.isEmpty ? l.articleUntitled : article.title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            height: 1.35,
+          ),
+        ),
+        if (article.body.trim().isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            _plainExcerpt(article.body),
+            maxLines: _excerptLines,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(height: 1.5, fontSize: 14, color: kTextMuted),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Strips the Markdown that reads badly as plain text — headings, emphasis,
+  /// list bullets and link syntax — so the excerpt is a sentence rather than
+  /// a line of punctuation.
+  static String _plainExcerpt(String markdown) {
+    var text = markdown;
+    text = text.replaceAll(RegExp(r'^#{1,6}\s*', multiLine: true), '');
+    text = text.replaceAll(RegExp(r'^\s*[*\-+]\s+', multiLine: true), '• ');
+    text = text.replaceAll(RegExp(r'\[([^\]]*)\]\([^)]*\)'), r'$1');
+    text = text.replaceAll(RegExp(r'[*_`]{1,3}'), '');
+    // Collapse blank lines: an excerpt of four lines should not spend two of
+    // them on paragraph spacing.
+    text = text.replaceAll(RegExp(r'\n{2,}'), '\n');
+    return text.trim();
+  }
 }

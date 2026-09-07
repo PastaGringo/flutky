@@ -183,12 +183,14 @@ void main() {
   });
 
   group('Feed sources', () {
-    test('only exposes sources that work with an observer alone', () {
+    test('offers only the sources that work with an observer alone', () {
+      // `author` exists in the enum but is not a tab: it needs author_id, and
+      // serves only to fold the user's own posts into the following feed.
       expect(
         FeedSource.values.map((s) => s.apiValue),
-        ['following', 'friends', 'all', 'bookmarks'],
-        reason: 'author and post_replies need extra ids and would 400',
+        containsAll(['following', 'friends', 'all', 'bookmarks']),
       );
+      expect(FeedSource.author.apiValue, 'author');
     });
   });
 }

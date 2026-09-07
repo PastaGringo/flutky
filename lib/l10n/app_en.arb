@@ -1,39 +1,46 @@
 {
   "@@locale": "en",
-
   "appTitle": "Flutky",
-
   "connectTagline": "Proof of concept: sign in with your Pubky account through Pubky Ring, then see your profile.",
   "connectButton": "Sign in with Pubky Ring",
   "connectAltLink": "Try the other link format (session/)",
   "connectLoadingProfile": "Reading your profile from Nexus…",
   "connectSessionReceived": "Session received. Loading…",
   "connectRetryProfile": "Retry loading the profile",
-
   "howItWorksTitle": "What is about to happen",
   "howItWorksStep1": "Flutky opens Pubky Ring through a pubkyring://session link.",
   "howItWorksStep2": "Ring asks which pubky to use, then shows an approval screen.",
   "howItWorksStep3": "Ring reopens Flutky, handing it your public key and a session secret.",
   "howItWorksStep4": "Flutky reads your profile from Nexus, without authentication.",
   "howItWorksSecret": "The session secret stays on the device. It is never displayed nor logged.",
-
   "exchangeTitle": "EXCHANGE WITH RING",
   "exchangeSent": "SENT",
   "exchangeReceived": "RECEIVED",
   "exchangeNothingYet": "Nothing received from Ring yet.",
   "exchangeCopied": "Exchange copied",
-
   "errorLinkUnreadable": "Unreadable incoming link: {error}",
-  "@errorLinkUnreadable": { "placeholders": { "error": {} } },
+  "@errorLinkUnreadable": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "errorRingRefused": "Ring refused ({code}): {message}",
-  "@errorRingRefused": { "placeholders": { "code": {}, "message": {} } },
+  "@errorRingRefused": {
+    "placeholders": {
+      "code": {},
+      "message": {}
+    }
+  },
   "errorRingCancelled": "Sign-in cancelled in Pubky Ring.",
   "errorRingEmpty": "Ring did come back to Flutky, but without a public key or session secret. That is the signature of a link handled by something other than the session flow. The full detail is below.",
   "errorRingUnreachable": "No app answered. Is Pubky Ring installed on this phone?",
   "errorRingOpenFailed": "Could not open Pubky Ring: {error}",
-  "@errorRingOpenFailed": { "placeholders": { "error": {} } },
+  "@errorRingOpenFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "errorNotIndexed": "Nexus does not know this key yet. The indexer only learns about an account once it is wired into the social graph: post something or follow someone from pubky.app, then try again.",
-
   "tabFeed": "Feed",
   "tabProfile": "Profile",
   "tabNotifications": "Notifications",
@@ -41,7 +48,6 @@
   "titleProfile": "My Pubky profile",
   "titleNotifications": "Notifications",
   "titleDiagnostics": "Diagnostics",
-
   "actionRefresh": "Refresh",
   "actionSignOut": "Sign out",
   "actionDiagnostics": "Diagnostics",
@@ -51,10 +57,8 @@
   "actionRetry": "Retry",
   "actionCopy": "Copy",
   "actionSettings": "Settings",
-
   "signOutTitle": "Sign out?",
   "signOutBody": "The stored session will be erased from this phone. You will have to go through Pubky Ring again to come back.",
-
   "feedSourceFollowing": "Following",
   "feedSourceFriends": "Friends",
   "feedSourceAll": "Global",
@@ -63,38 +67,78 @@
   "feedEmptyOther": "Nothing to show in this feed.",
   "feedComposeTooltip": "Write a post",
   "feedPublished": "Published. The feed will show it once Nexus has indexed it.",
-
   "postPending": "posted just now · waiting to be indexed",
   "postRepostedLabel": "reposted",
   "postQuotedUnavailable": "Original post unavailable",
   "postLoadingQuoted": "Loading the original post…",
   "postReplyingTo": "replying to",
-
   "timeJustNow": "just now",
   "timeMinutes": "{count} min ago",
-  "@timeMinutes": { "placeholders": { "count": { "type": "int" } } },
+  "@timeMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "timeHours": "{count} h ago",
-  "@timeHours": { "placeholders": { "count": { "type": "int" } } },
+  "@timeHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "timeDays": "{count} d ago",
-  "@timeDays": { "placeholders": { "count": { "type": "int" } } },
-
+  "@timeDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "composeTitle": "New post",
   "composeHint": "What's happening?",
   "composeCounter": "{used} / {max}",
-  "@composeCounter": { "placeholders": { "used": { "type": "int" }, "max": { "type": "int" } } },
+  "@composeCounter": {
+    "placeholders": {
+      "used": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
   "composeTarget": "Posted to your homeserver",
   "composePublish": "Publish",
   "composeNote": "The post reaches your homeserver immediately. When it shows up in the feed depends on the indexer, which always lags a little.",
   "composeAccessChecking": "checking…",
   "composeAccessOpen": "{kind} · writing allowed",
-  "@composeAccessOpen": { "placeholders": { "kind": {} } },
+  "@composeAccessOpen": {
+    "placeholders": {
+      "kind": {}
+    }
+  },
   "composeAccessDenied": "{kind} · writing refused",
-  "@composeAccessDenied": { "placeholders": { "kind": {} } },
+  "@composeAccessDenied": {
+    "placeholders": {
+      "kind": {}
+    }
+  },
   "composeEmpty": "An empty post cannot be published.",
   "composeTooLong": "A short post is limited to {max} characters ({used} here).",
-  "@composeTooLong": { "placeholders": { "max": { "type": "int" }, "used": { "type": "int" } } },
+  "@composeTooLong": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      },
+      "used": {
+        "type": "int"
+      }
+    }
+  },
   "composeWrittenButMissing": "written, but not found when read back",
-
   "profileBio": "Bio",
   "profilePublicKey": "Public key",
   "profileActivity": "Activity",
@@ -105,12 +149,17 @@
   "profileNoName": "No name",
   "profileSecretReceived": "Secret received",
   "profileSecretLength": "{count} characters (not shown)",
-  "@profileSecretLength": { "placeholders": { "count": { "type": "int" } } },
+  "@profileSecretLength": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "profileCapabilities": "Capabilities",
   "profileNoCapabilities": "none advertised",
   "profileIndexedOn": "Indexed on",
   "profileSessionWarning": "The session secret is as good as a password: this proof of concept keeps it in the platform keystore and never shows it.",
-
   "countPosts": "Posts",
   "countReplies": "Replies",
   "countFollowers": "Followers",
@@ -120,36 +169,90 @@
   "countUniqueTags": "Distinct tags",
   "countBookmarks": "Bookmarks",
   "countCollections": "Collections",
-
   "notifFollow": "{who} followed you",
-  "@notifFollow": { "placeholders": { "who": {} } },
+  "@notifFollow": {
+    "placeholders": {
+      "who": {}
+    }
+  },
   "notifNewFriend": "{who} follows you back — you are now friends",
-  "@notifNewFriend": { "placeholders": { "who": {} } },
+  "@notifNewFriend": {
+    "placeholders": {
+      "who": {}
+    }
+  },
   "notifLostFriend": "{who} unfollowed you",
-  "@notifLostFriend": { "placeholders": { "who": {} } },
+  "@notifLostFriend": {
+    "placeholders": {
+      "who": {}
+    }
+  },
   "notifTagPost": "{who} tagged your post “{label}”",
-  "@notifTagPost": { "placeholders": { "who": {}, "label": {} } },
+  "@notifTagPost": {
+    "placeholders": {
+      "who": {},
+      "label": {}
+    }
+  },
   "notifTagProfile": "{who} tagged your profile “{label}”",
-  "@notifTagProfile": { "placeholders": { "who": {}, "label": {} } },
+  "@notifTagProfile": {
+    "placeholders": {
+      "who": {},
+      "label": {}
+    }
+  },
   "notifUntagPost": "{who} removed the tag “{label}” from your post",
-  "@notifUntagPost": { "placeholders": { "who": {}, "label": {} } },
+  "@notifUntagPost": {
+    "placeholders": {
+      "who": {},
+      "label": {}
+    }
+  },
   "notifUntagProfile": "{who} removed the tag “{label}” from your profile",
-  "@notifUntagProfile": { "placeholders": { "who": {}, "label": {} } },
+  "@notifUntagProfile": {
+    "placeholders": {
+      "who": {},
+      "label": {}
+    }
+  },
   "notifReply": "{who} replied to your post",
-  "@notifReply": { "placeholders": { "who": {} } },
+  "@notifReply": {
+    "placeholders": {
+      "who": {}
+    }
+  },
   "notifRepost": "{who} reposted your post",
-  "@notifRepost": { "placeholders": { "who": {} } },
+  "@notifRepost": {
+    "placeholders": {
+      "who": {}
+    }
+  },
   "notifMention": "{who} mentioned you",
-  "@notifMention": { "placeholders": { "who": {} } },
+  "@notifMention": {
+    "placeholders": {
+      "who": {}
+    }
+  },
   "notifPostDeleted": "{who} deleted a post you were involved in",
-  "@notifPostDeleted": { "placeholders": { "who": {} } },
+  "@notifPostDeleted": {
+    "placeholders": {
+      "who": {}
+    }
+  },
   "notifPostEdited": "{who} edited a post you were involved in",
-  "@notifPostEdited": { "placeholders": { "who": {} } },
+  "@notifPostEdited": {
+    "placeholders": {
+      "who": {}
+    }
+  },
   "notifUnknown": "Notification of an unrecognised kind ({type})",
-  "@notifUnknown": { "placeholders": { "type": {} } },
+  "@notifUnknown": {
+    "placeholders": {
+      "type": {}
+    }
+  },
   "notifEmpty": "No notifications. They arrive when someone follows you, tags you, replies to you or reposts you.",
   "notifSomeone": "Someone",
-
   "diagSecretSection": "SESSION SECRET",
   "diagLength": "Length",
   "diagDetectedType": "Detected type",
@@ -162,7 +265,6 @@
   "diagRerun": "Run again",
   "diagFootnote": "The homeserver answers 401 even for a route that does not exist: authentication runs before routing. A lone 401 therefore proves nothing. The two controls at the top use no authentication at all — they are what give the others meaning: if they pass, the address and the network are fine, and a refusal below really is about the session.",
   "diagFailed": "failed",
-
   "settingsLanguage": "Language",
   "settingsLanguageSystem": "System",
   "settingsLanguageFrench": "Français",
@@ -170,5 +272,24 @@
   "settingsAbout": "About",
   "settingsVersion": "Version",
   "settingsSourceCode": "Source code",
-  "settingsLicense": "MIT licence"
+  "settingsLicense": "MIT licence",
+  "articleUntitled": "Untitled article",
+  "articleReadOn": "Read the full article on pubky.app",
+  "actionFollow": "Follow",
+  "actionUnfollow": "Unfollow",
+  "followFailed": "Could not update the follow: {error}",
+  "@followFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "settingsFeed": "Feed",
+  "settingsIncludeOwnPosts": "Include my own posts",
+  "settingsIncludeOwnPostsNote": "The Following feed covers the accounts you follow, not you. Turn this on to see your own posts among theirs.",
+  "composeAskJeb": "Ask Jeb",
+  "composeAskJebNote": "Jeb is an AI account on Pubky. Mention it in a post and its reply shows up in your feed.",
+  "composeMention": "Mention someone",
+  "composeMentionSearch": "Search by name…",
+  "composeMentionNoResult": "Nobody found",
+  "composeMentionAdded": "Mention added"
 }

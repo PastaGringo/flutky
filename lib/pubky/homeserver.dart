@@ -170,6 +170,51 @@ class HomeserverClient {
     return id;
   }
 
+  /// Follows an account.
+  ///
+  /// The resource is named after the target key — no computed id — and its
+  /// body carries only a creation time, in microseconds. Measured on a real
+  /// follow: `{"created_at":1750359659005000}`.
+  Future<void> follow(String targetPubky) async {
+    final res = await _client
+        .put(
+          _entry('/pub/pubky.app/follows/$targetPubky'),
+          headers: {
+            ...await _authHeaders(),
+            'Content-Type': 'application/json',
+          },
+          body: utf8.encode(jsonEncode({
+            'created_at': DateTime.now().toUtc().microsecondsSinceEpoch,
+          })),
+        )
+        .timeout(_timeout);
+
+    if (res.statusCode == 401 || res.statusCode == 403) {
+      throw WriteUnauthorized(res.statusCode, _shorten(res.body), authKind);
+    }
+    if (res.statusCode != 200 && res.statusCode != 201) {
+      throw WriteFailed(res.statusCode, _shorten(res.body));
+    }
+  }
+
+  /// Stops following. Deleting a resource that is not there is not an error
+  /// worth surfacing — the end state is the one the user asked for.
+  Future<void> unfollow(String targetPubky) async {
+    final res = await _client
+        .delete(
+          _entry('/pub/pubky.app/follows/$targetPubky'),
+          headers: await _authHeaders(),
+        )
+        .timeout(_timeout);
+
+    if (res.statusCode == 401 || res.statusCode == 403) {
+      throw WriteUnauthorized(res.statusCode, _shorten(res.body), authKind);
+    }
+    if (res.statusCode >= 400 && res.statusCode != 404) {
+      throw WriteFailed(res.statusCode, _shorten(res.body));
+    }
+  }
+
   /// Reads back what was just written, straight from the homeserver.
   ///
   /// Worth doing rather than trusting the 201: Nexus lags the homeserver, so

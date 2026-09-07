@@ -6,15 +6,22 @@ import '../l10n/app_localizations.dart';
 import '../pubky/mentions.dart';
 import '../pubky/nexus.dart';
 import '../pubky/ring_session.dart';
+import '../settings/feed_preferences.dart';
 import '../theme.dart';
 import 'compose_sheet.dart';
 import 'post_card.dart';
 
 class FeedScreen extends StatefulWidget {
-  const FeedScreen({super.key, required this.nexus, required this.session});
+  const FeedScreen({
+    super.key,
+    required this.nexus,
+    required this.session,
+    required this.preferences,
+  });
 
   final NexusClient nexus;
   final RingSession session;
+  final FeedPreferences preferences;
 
   @override
   State<FeedScreen> createState() => _FeedScreenState();
@@ -46,11 +53,19 @@ class _FeedScreenState extends State<FeedScreen> {
   void initState() {
     super.initState();
     _scroll.addListener(_onScroll);
+    widget.preferences.addListener(_onPreferencesChanged);
     _reload();
+  }
+
+  void _onPreferencesChanged() {
+    // Only the following feed is affected; reloading the others would throw
+    // away their scroll position for nothing.
+    if (_source == FeedSource.following) _reload();
   }
 
   @override
   void dispose() {
+    widget.preferences.removeListener(_onPreferencesChanged);
     _scroll.dispose();
     super.dispose();
   }
@@ -75,12 +90,20 @@ class _FeedScreenState extends State<FeedScreen> {
     setState(() => _loading = true);
 
     try {
-      final page = await widget.nexus.fetchStream(
+      var page = await widget.nexus.fetchStream(
         source: _source,
         observerId: widget.session.pubky,
         limit: _pageSize,
         skip: _posts.length,
       );
+
+      // Nexus's `following` stream covers the accounts you follow, never you.
+      // Folding your own posts in means a second read, merged by date — the
+      // API has no flag for it.
+      if (_source == FeedSource.following &&
+          widget.preferences.includeOwnPosts) {
+        page = await _mergeOwnPosts(page);
+      }
 
       if (!mounted) return;
       setState(() {
@@ -96,6 +119,43 @@ class _FeedScreenState extends State<FeedScreen> {
       if (mounted) setState(() => _error = '$e');
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// Merges the user's own posts into a page of the following feed.
+  ///
+  /// Both streams are ordered newest first, so the merge is a sort by date;
+  /// the page is then trimmed back to its size, and the offset of the next
+  /// request stays that of the following feed alone. A post already present
+  /// is not added twice — reposting yourself would otherwise duplicate it.
+  Future<List<PubkyPost>> _mergeOwnPosts(List<PubkyPost> page) async {
+    if (page.isEmpty) return page;
+    try {
+      final mine = await widget.nexus.fetchStream(
+        source: FeedSource.author,
+        authorId: widget.session.pubky,
+        observerId: widget.session.pubky,
+        limit: _pageSize,
+        skip: 0,
+      );
+
+      final oldest = page.last.indexedAt;
+      final seen = page.map((p) => p.id).toSet();
+      final merged = [
+        ...page,
+        ...mine.where((p) =>
+            !seen.contains(p.id) &&
+            (oldest == null ||
+                p.indexedAt == null ||
+                !p.indexedAt!.isBefore(oldest))),
+      ]..sort((a, b) => (b.indexedAt ?? DateTime(0))
+          .compareTo(a.indexedAt ?? DateTime(0)));
+
+      return merged.take(page.length).toList();
+    } catch (_) {
+      // The following feed is what matters; losing the merge is not worth
+      // losing the page.
+      return page;
     }
   }
 
@@ -143,8 +203,13 @@ class _FeedScreenState extends State<FeedScreen> {
     _reload();
   }
 
-  Future<void> _compose() async {
-    final published = await showComposeSheet(context, session: widget.session);
+  Future<void> _compose({String initialContent = ''}) async {
+    final published = await showComposeSheet(
+      context,
+      session: widget.session,
+      nexus: widget.nexus,
+      initialContent: initialContent,
+    );
     if (published == null || !mounted) return;
 
     setState(() {
@@ -180,12 +245,30 @@ class _FeedScreenState extends State<FeedScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton(
-        onPressed: _compose,
-        backgroundColor: kAccent,
-        foregroundColor: const Color(0xFF04120E),
-        tooltip: l.feedComposeTooltip,
-        child: const Icon(Icons.edit_rounded),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          // Asking the AI is just a post that mentions it: the shortcut only
+          // pre-fills the mention, the rest of the flow is unchanged.
+          FloatingActionButton.extended(
+            heroTag: 'askJeb',
+            onPressed: () => _compose(initialContent: 'pubky$jebPubky '),
+            backgroundColor: kSurface,
+            foregroundColor: kAccent,
+            icon: const Icon(Icons.smart_toy_outlined, size: 19),
+            label: Text(l.composeAskJeb),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton(
+            heroTag: 'compose',
+            onPressed: _compose,
+            backgroundColor: kAccent,
+            foregroundColor: const Color(0xFF04120E),
+            tooltip: l.feedComposeTooltip,
+            child: const Icon(Icons.edit_rounded),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -226,6 +309,7 @@ class _FeedScreenState extends State<FeedScreen> {
                           post: post,
                           nexus: widget.nexus,
                           profiles: _profiles,
+                          session: widget.session,
                           quoted: quoted,
                           quotedAuthor:
                               quoted == null ? null : _profiles[quoted.author],
@@ -247,11 +331,21 @@ class _SourceBar extends StatelessWidget {
   final FeedSource current;
   final void Function(FeedSource) onPick;
 
+  /// The tabs offered, in order. `author` is deliberately absent: it exists
+  /// only to fold the user's own posts into the following feed.
+  static const tabs = [
+    FeedSource.following,
+    FeedSource.friends,
+    FeedSource.all,
+    FeedSource.bookmarks,
+  ];
+
   static String label(L10n l, FeedSource source) => switch (source) {
         FeedSource.following => l.feedSourceFollowing,
         FeedSource.friends => l.feedSourceFriends,
         FeedSource.all => l.feedSourceAll,
         FeedSource.bookmarks => l.feedSourceBookmarks,
+        FeedSource.author => l.countPosts,
       };
 
   @override
@@ -263,7 +357,7 @@ class _SourceBar extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         children: [
-          for (final source in FeedSource.values)
+          for (final source in _SourceBar.tabs)
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: _Chip(

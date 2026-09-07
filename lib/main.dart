@@ -10,6 +10,7 @@ import 'pubky/ring_session.dart';
 import 'pubky/session_store.dart';
 import 'screens/connect_screen.dart';
 import 'screens/home_shell.dart';
+import 'settings/feed_preferences.dart';
 import 'settings/locale_controller.dart';
 import 'theme.dart';
 
@@ -21,14 +22,16 @@ typedef LocalizedError = String Function(L10n);
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final locales = LocaleController();
-  await locales.load();
-  runApp(FlutkyApp(locales: locales));
+  final preferences = FeedPreferences();
+  await Future.wait([locales.load(), preferences.load()]);
+  runApp(FlutkyApp(locales: locales, preferences: preferences));
 }
 
 class FlutkyApp extends StatelessWidget {
-  const FlutkyApp({super.key, required this.locales});
+  const FlutkyApp({super.key, required this.locales, required this.preferences});
 
   final LocaleController locales;
+  final FeedPreferences preferences;
 
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<Locale?>(
@@ -45,7 +48,7 @@ class FlutkyApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          home: SessionGate(locales: locales),
+          home: SessionGate(locales: locales, preferences: preferences),
         ),
       );
 }
@@ -53,9 +56,14 @@ class FlutkyApp extends StatelessWidget {
 /// Holds the whole state machine: restoring a stored session, waiting for
 /// Ring, loading the profile, showing the app, or reporting what went wrong.
 class SessionGate extends StatefulWidget {
-  const SessionGate({super.key, required this.locales});
+  const SessionGate({
+    super.key,
+    required this.locales,
+    required this.preferences,
+  });
 
   final LocaleController locales;
+  final FeedPreferences preferences;
 
   @override
   State<SessionGate> createState() => _SessionGateState();
@@ -206,6 +214,7 @@ class _SessionGateState extends State<SessionGate> {
         profile: profile,
         profileError: _error,
         locales: widget.locales,
+        preferences: widget.preferences,
         onRefreshProfile: () => _loadProfile(session.pubky),
         onDisconnect: _disconnect,
       );

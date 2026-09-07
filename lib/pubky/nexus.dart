@@ -18,6 +18,7 @@ class PubkyProfile {
     required this.counts,
     required this.tags,
     required this.indexedAt,
+    this.followedByViewer = false,
   });
 
   final String id;
@@ -28,6 +29,11 @@ class PubkyProfile {
   final Map<String, int> counts;
   final List<ProfileTag> tags;
   final DateTime? indexedAt;
+
+  /// Whether the account passed as `viewer_id` follows this one. Nexus only
+  /// fills `relationship` when a viewer was given, so this is false by default
+  /// rather than unknown — the interface corrects itself on the next read.
+  final bool followedByViewer;
 
   /// Nexus renders avatars itself, keyed by user id — no need to resolve the
   /// `pubky://.../files/<id>` URI carried in `details.image`.
@@ -62,6 +68,9 @@ class PubkyProfile {
       indexedAt: ms is num
           ? DateTime.fromMillisecondsSinceEpoch(ms.toInt(), isUtc: true).toLocal()
           : null,
+      followedByViewer:
+          ((json['relationship'] as Map<String, dynamic>?)?['following'] as bool?) ??
+              false,
     );
   }
 }
@@ -95,7 +104,11 @@ enum FeedSource {
   following('following'),
   friends('friends'),
   all('all'),
-  bookmarks('bookmarks');
+  bookmarks('bookmarks'),
+
+  /// Not offered as a tab: used to fold the user's own posts into the
+  /// following feed, which Nexus does not do on its own.
+  author('author');
 
   const FeedSource(this.apiValue);
   final String apiValue;
@@ -144,6 +157,26 @@ class PubkyPost {
   /// True when the repost carries words of its own — a quote rather than a
   /// bare share. Worth distinguishing: a quote deserves its own text on top.
   bool get isQuote => isRepost && content.trim().isNotEmpty;
+
+  /// A `long` post does not carry plain text: its content is a JSON object
+  /// `{"title", "body"}`, the body being Markdown. Rendered as-is it shows raw
+  /// JSON, which is what a client that ignores the kind ends up doing.
+  ///
+  /// Returns null when the payload is not shaped that way — a malformed
+  /// article then falls back to being displayed as text rather than vanishing.
+  ({String title, String body})? get article {
+    if (kind != 'long') return null;
+    try {
+      final decoded = jsonDecode(content);
+      if (decoded is! Map<String, dynamic>) return null;
+      final title = decoded['title']?.toString().trim() ?? '';
+      final body = decoded['body']?.toString() ?? '';
+      if (title.isEmpty && body.isEmpty) return null;
+      return (title: title, body: body);
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// Nexus renders three sizes; `feed` is the one sized for a timeline —
   /// measured at 7.7 kB WebP against 149 kB JPEG for `main` on the same image.
@@ -223,20 +256,24 @@ class NexusClient {
   /// Reads a profile, asking Nexus to index the key first if it does not know
   /// it yet. The retry matters in practice: the indexer lags the homeserver,
   /// so a freshly ingested key is not readable on the very next call.
-  Future<PubkyProfile> fetchProfile(String pubky) async {
+  /// [viewerId] is what makes Nexus fill `relationship` — without it the app
+  /// cannot tell whether the viewer already follows this account.
+  Future<PubkyProfile> fetchProfile(String pubky, {String? viewerId}) async {
     try {
-      return await _getProfile(pubky);
+      return await _getProfile(pubky, viewerId);
     } on ProfileNotIndexed {
       final accepted = await requestIngest(pubky);
       if (!accepted) rethrow;
       await Future<void>.delayed(const Duration(seconds: 3));
-      return _getProfile(pubky);
+      return _getProfile(pubky, viewerId);
     }
   }
 
-  Future<PubkyProfile> _getProfile(String pubky) async {
+  Future<PubkyProfile> _getProfile(String pubky, [String? viewerId]) async {
     final res = await _client
-        .get(Uri.parse('$nexusBase/v0/user/$pubky'))
+        .get(Uri.parse('$nexusBase/v0/user/$pubky').replace(
+          queryParameters: {'viewer_id': ?viewerId},
+        ))
         .timeout(_timeout);
 
     if (res.statusCode == 404) throw ProfileNotIndexed(pubky);
@@ -270,11 +307,16 @@ class NexusClient {
   Future<List<PubkyPost>> fetchStream({
     required FeedSource source,
     String? observerId,
+    /// Required by `source=author`, ignored by every other source — and
+    /// silently ignored *without* it too, which is why the app never passes
+    /// one unless the source calls for it.
+    String? authorId,
     int limit = 20,
     int skip = 0,
   }) async {
     final query = <String, String>{
       'source': source.apiValue,
+      'author_id': ?authorId,
       'limit': '${limit.clamp(1, 50)}',
       'skip': '$skip',
       'include_attachment_metadata': 'true',
@@ -364,6 +406,30 @@ class NexusClient {
         .whereType<Map<String, dynamic>>()
         .map(PubkyNotification.fromJson)
         .toList();
+  }
+
+  /// Searches accounts by display name. Nexus answers with keys only, so the
+  /// profiles are fetched in a second, batched call.
+  Future<List<PubkyProfile>> searchUsersByName(String prefix,
+      {int limit = 8}) async {
+    final trimmed = prefix.trim();
+    if (trimmed.isEmpty) return const [];
+
+    final res = await _client
+        .get(Uri.parse(
+            '$nexusBase/v0/search/users/by_name/${Uri.encodeComponent(trimmed)}'
+            '?limit=$limit'))
+        .timeout(_timeout);
+    if (res.statusCode != 200) return const [];
+
+    final decoded = jsonDecode(utf8.decode(res.bodyBytes));
+    if (decoded is! List) return const [];
+    final keys = decoded.map((e) => e.toString()).where((k) => k.isNotEmpty);
+    if (keys.isEmpty) return const [];
+
+    final profiles = await fetchUsersByIds(keys);
+    // Keep the order Nexus returned: it ranks the results.
+    return [for (final k in keys) ?profiles[k]];
   }
 
   void close() => _client.close();

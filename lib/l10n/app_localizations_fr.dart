@@ -463,4 +463,50 @@ class L10nFr extends L10n {
 
   @override
   String get settingsLicense => 'Licence MIT';
+
+  @override
+  String get articleUntitled => 'Article sans titre';
+
+  @override
+  String get articleReadOn => 'Lire l\'article entier sur pubky.app';
+
+  @override
+  String get actionFollow => 'Suivre';
+
+  @override
+  String get actionUnfollow => 'Ne plus suivre';
+
+  @override
+  String followFailed(Object error) {
+    return 'Impossible de modifier l\'abonnement : $error';
+  }
+
+  @override
+  String get settingsFeed => 'Flux';
+
+  @override
+  String get settingsIncludeOwnPosts => 'Inclure mes propres posts';
+
+  @override
+  String get settingsIncludeOwnPostsNote =>
+      'Le flux Abonnements montre les comptes que tu suis, pas toi. Active ceci pour voir tes posts parmi les leurs.';
+
+  @override
+  String get composeAskJeb => 'Demander à Jeb';
+
+  @override
+  String get composeAskJebNote =>
+      'Jeb est un compte IA sur Pubky. Mentionne-le dans un post et sa réponse apparaîtra dans ton flux.';
+
+  @override
+  String get composeMention => 'Mentionner quelqu\'un';
+
+  @override
+  String get composeMentionSearch => 'Chercher par nom…';
+
+  @override
+  String get composeMentionNoResult => 'Personne trouvée';
+
+  @override
+  String get composeMentionAdded => 'Mention ajoutée';
 }

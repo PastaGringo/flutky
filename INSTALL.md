@@ -44,8 +44,8 @@ Flutky is signed with a key that will not change. If you want to check that an
 APK really comes from this project:
 
 ```
-Certificate DN:     CN=Flutky, OU=Delvops, O=Delvops, C=FR
-SHA-256 digest:     00dd6977dac2d0e683f8b58f73f28a73a3c142c05cb53711ab3f6b371b428bc0
+Certificate DN:     CN=Flutky, OU=pastalabs.dev, O=pastalabs.dev, C=FR
+SHA-256 digest:     7422979ad28b3f5b7d4bc840cd1a9c59231ba3911cb529a10e777feca2ca0d2a
 ```
 
 Android enforces this for you on every update: an APK signed with a different

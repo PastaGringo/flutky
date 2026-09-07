@@ -3,15 +3,21 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/app_localizations.dart';
+import '../settings/feed_preferences.dart';
 import '../settings/locale_controller.dart';
 import '../theme.dart';
 
 const repositoryUrl = 'https://github.com/PastaGringo/flutky';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key, required this.locales});
+  const SettingsScreen({
+    super.key,
+    required this.locales,
+    required this.preferences,
+  });
 
   final LocaleController locales;
+  final FeedPreferences preferences;
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +57,34 @@ class SettingsScreen extends StatelessWidget {
                             onTap: () => locales.set(locale),
                           ),
                       ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            Panel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _SectionTitle(l.settingsFeed.toUpperCase()),
+                  const SizedBox(height: 4),
+                  ListenableBuilder(
+                    listenable: preferences,
+                    builder: (context, _) => SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: preferences.includeOwnPosts,
+                      onChanged: preferences.setIncludeOwnPosts,
+                      activeThumbColor: kAccent,
+                      title: Text(
+                        l.settingsIncludeOwnPosts,
+                        style: const TextStyle(fontSize: 15),
+                      ),
+                      subtitle: Text(
+                        l.settingsIncludeOwnPostsNote,
+                        style: const TextStyle(
+                            color: kTextMuted, fontSize: 12.5, height: 1.4),
+                      ),
                     ),
                   ),
                 ],

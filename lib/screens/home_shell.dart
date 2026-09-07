@@ -5,6 +5,7 @@ import '../l10n/app_localizations.dart';
 import '../main.dart' show LocalizedError;
 import '../pubky/nexus.dart';
 import '../pubky/ring_session.dart';
+import '../settings/feed_preferences.dart';
 import '../settings/locale_controller.dart';
 import '../theme.dart';
 import 'diagnostics_screen.dart';
@@ -25,6 +26,7 @@ class HomeShell extends StatefulWidget {
     required this.profile,
     required this.profileError,
     required this.locales,
+    required this.preferences,
     required this.onRefreshProfile,
     required this.onDisconnect,
   });
@@ -34,6 +36,7 @@ class HomeShell extends StatefulWidget {
   final PubkyProfile profile;
   final LocalizedError? profileError;
   final LocaleController locales;
+  final FeedPreferences preferences;
   final Future<void> Function() onRefreshProfile;
   final VoidCallback onDisconnect;
 
@@ -109,7 +112,10 @@ class _HomeShellState extends State<HomeShell> {
                 case 'settings':
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
-                      builder: (_) => SettingsScreen(locales: widget.locales),
+                      builder: (_) => SettingsScreen(
+                        locales: widget.locales,
+                        preferences: widget.preferences,
+                      ),
                     ),
                   );
                 case 'signout':
@@ -138,7 +144,11 @@ class _HomeShellState extends State<HomeShell> {
         child: IndexedStack(
           index: _tab,
           children: [
-            FeedScreen(nexus: widget.nexus, session: widget.session),
+            FeedScreen(
+              nexus: widget.nexus,
+              session: widget.session,
+              preferences: widget.preferences,
+            ),
             NotificationsScreen(
               nexus: widget.nexus,
               pubky: widget.session.pubky,

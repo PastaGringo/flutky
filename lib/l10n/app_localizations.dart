@@ -876,6 +876,90 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'MIT licence'**
   String get settingsLicense;
+
+  /// No description provided for @articleUntitled.
+  ///
+  /// In en, this message translates to:
+  /// **'Untitled article'**
+  String get articleUntitled;
+
+  /// No description provided for @articleReadOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Read the full article on pubky.app'**
+  String get articleReadOn;
+
+  /// No description provided for @actionFollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow'**
+  String get actionFollow;
+
+  /// No description provided for @actionUnfollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Unfollow'**
+  String get actionUnfollow;
+
+  /// No description provided for @followFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not update the follow: {error}'**
+  String followFailed(Object error);
+
+  /// No description provided for @settingsFeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Feed'**
+  String get settingsFeed;
+
+  /// No description provided for @settingsIncludeOwnPosts.
+  ///
+  /// In en, this message translates to:
+  /// **'Include my own posts'**
+  String get settingsIncludeOwnPosts;
+
+  /// No description provided for @settingsIncludeOwnPostsNote.
+  ///
+  /// In en, this message translates to:
+  /// **'The Following feed covers the accounts you follow, not you. Turn this on to see your own posts among theirs.'**
+  String get settingsIncludeOwnPostsNote;
+
+  /// No description provided for @composeAskJeb.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask Jeb'**
+  String get composeAskJeb;
+
+  /// No description provided for @composeAskJebNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Jeb is an AI account on Pubky. Mention it in a post and its reply shows up in your feed.'**
+  String get composeAskJebNote;
+
+  /// No description provided for @composeMention.
+  ///
+  /// In en, this message translates to:
+  /// **'Mention someone'**
+  String get composeMention;
+
+  /// No description provided for @composeMentionSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by name…'**
+  String get composeMentionSearch;
+
+  /// No description provided for @composeMentionNoResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Nobody found'**
+  String get composeMentionNoResult;
+
+  /// No description provided for @composeMentionAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Mention added'**
+  String get composeMentionAdded;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../l10n/app_localizations.dart';
 
+import '../pubky/homeserver.dart';
 import '../pubky/nexus.dart';
+import '../pubky/ring_session.dart';
 import '../theme.dart';
 
 /// Opens the profile of a mentioned account.
@@ -15,6 +17,9 @@ Future<void> showProfileSheet(
   required NexusClient nexus,
   required String pubky,
   PubkyProfile? known,
+  /// When given — and when the profile is not the user's own — the sheet
+  /// offers to follow or unfollow.
+  RingSession? session,
 }) =>
     showModalBottomSheet<void>(
       context: context,
@@ -24,15 +29,26 @@ Future<void> showProfileSheet(
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => _ProfileSheet(nexus: nexus, pubky: pubky, known: known),
+      builder: (_) => _ProfileSheet(
+        nexus: nexus,
+        pubky: pubky,
+        known: known,
+        session: session,
+      ),
     );
 
 class _ProfileSheet extends StatefulWidget {
-  const _ProfileSheet({required this.nexus, required this.pubky, this.known});
+  const _ProfileSheet({
+    required this.nexus,
+    required this.pubky,
+    this.known,
+    this.session,
+  });
 
   final NexusClient nexus;
   final String pubky;
   final PubkyProfile? known;
+  final RingSession? session;
 
   @override
   State<_ProfileSheet> createState() => _ProfileSheetState();
@@ -41,6 +57,43 @@ class _ProfileSheet extends StatefulWidget {
 class _ProfileSheetState extends State<_ProfileSheet> {
   PubkyProfile? _profile;
   String? _error;
+
+  /// null while unknown, then the state we believe the server is in.
+  bool? _following;
+  bool _updatingFollow = false;
+
+  bool get _isSelf => widget.session?.pubky == widget.pubky;
+
+  Future<void> _toggleFollow() async {
+    final session = widget.session;
+    if (session == null || _updatingFollow) return;
+
+    final target = !(_following ?? false);
+    setState(() {
+      _updatingFollow = true;
+      // Optimistic: the button answers now, and reverts if the server refuses.
+      _following = target;
+    });
+
+    final client = HomeserverClient(session: session);
+    try {
+      if (target) {
+        await client.follow(widget.pubky);
+      } else {
+        await client.unfollow(widget.pubky);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _following = !target;
+          _error = L10n.of(context).followFailed('$e');
+        });
+      }
+    } finally {
+      client.close();
+      if (mounted) setState(() => _updatingFollow = false);
+    }
+  }
 
   @override
   void initState() {
@@ -51,8 +104,13 @@ class _ProfileSheetState extends State<_ProfileSheet> {
 
   Future<void> _load() async {
     try {
-      final profile = await widget.nexus.fetchProfile(widget.pubky);
-      if (mounted) setState(() => _profile = profile);
+      final profile = await widget.nexus.fetchProfile(widget.pubky, viewerId: widget.session?.pubky);
+      if (mounted) {
+        setState(() {
+          _profile = profile;
+          _following ??= profile.followedByViewer;
+        });
+      }
     } on ProfileNotIndexed {
       if (mounted && _profile == null) {
         setState(() => _error =
@@ -151,6 +209,21 @@ class _ProfileSheetState extends State<_ProfileSheet> {
             ),
           ],
         ),
+        if (widget.session != null && !_isSelf) ...[
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: (_following ?? false)
+                ? OutlinedButton(
+                    onPressed: _updatingFollow ? null : _toggleFollow,
+                    child: Text(L10n.of(context).actionUnfollow),
+                  )
+                : FilledButton(
+                    onPressed: _updatingFollow ? null : _toggleFollow,
+                    child: Text(L10n.of(context).actionFollow),
+                  ),
+          ),
+        ],
         if (profile.bio != null) ...[
           const SizedBox(height: 16),
           Text(

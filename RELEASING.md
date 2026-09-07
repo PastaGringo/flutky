@@ -11,7 +11,7 @@ de l'app installée. Le keystore de Flutky est donc unique et permanent :
 
 | | |
 |---|---|
-| Fichier | `~/.android/keystores/flutky-release.jks` — **hors du dépôt** |
+| Fichier | `~/.android/keystores/flutky-pastalabs.jks` — **hors du dépôt** |
 | Alias | `flutky` |
 | Clé | RSA 4096, valable 10 000 jours |
 | Mot de passe | Infisical, projet `flutky`, environnement `prod` |

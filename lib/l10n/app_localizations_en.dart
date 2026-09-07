@@ -463,4 +463,50 @@ class L10nEn extends L10n {
 
   @override
   String get settingsLicense => 'MIT licence';
+
+  @override
+  String get articleUntitled => 'Untitled article';
+
+  @override
+  String get articleReadOn => 'Read the full article on pubky.app';
+
+  @override
+  String get actionFollow => 'Follow';
+
+  @override
+  String get actionUnfollow => 'Unfollow';
+
+  @override
+  String followFailed(Object error) {
+    return 'Could not update the follow: $error';
+  }
+
+  @override
+  String get settingsFeed => 'Feed';
+
+  @override
+  String get settingsIncludeOwnPosts => 'Include my own posts';
+
+  @override
+  String get settingsIncludeOwnPostsNote =>
+      'The Following feed covers the accounts you follow, not you. Turn this on to see your own posts among theirs.';
+
+  @override
+  String get composeAskJeb => 'Ask Jeb';
+
+  @override
+  String get composeAskJebNote =>
+      'Jeb is an AI account on Pubky. Mention it in a post and its reply shows up in your feed.';
+
+  @override
+  String get composeMention => 'Mention someone';
+
+  @override
+  String get composeMentionSearch => 'Search by name…';
+
+  @override
+  String get composeMentionNoResult => 'Nobody found';
+
+  @override
+  String get composeMentionAdded => 'Mention added';
 }

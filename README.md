@@ -26,13 +26,18 @@ and building for iOS needs macOS.
 | ✅ | Notifications: follows, tags, replies, reposts, mentions — the twelve kinds Nexus emits |
 | ✅ | **Publishing** a short post to your homeserver |
 | ✅ | French and English, switchable in-app |
+| ✅ | Long-form posts, whose content is JSON rather than text |
+| ✅ | Follow and unfollow from a profile |
+| ✅ | Mentioning people when composing, searched by display name |
+| ✅ | An "Ask Jeb" shortcut — mention the AI account and its reply lands in your feed |
+| ✅ | Optionally folding your own posts into the Following feed |
 | ✅ | Built-in diagnostics for the authentication path |
 
 ### Not there yet
 
 | | |
 |---|---|
-| ❌ | Following, tagging, bookmarking, replying — reads only, no writes |
+| ❌ | Tagging, bookmarking, replying — the tag id needs Blake3, not yet ported |
 | ❌ | Attaching an image to a post (needs binary upload) |
 | ❌ | Deleting or editing your own posts |
 | ❌ | Opening a post to read its replies |
