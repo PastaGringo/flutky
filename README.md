@@ -23,7 +23,7 @@ and building for iOS needs macOS.
 | ✅ | Feed: following, friends, global, bookmarks — paginated, with images |
 | ✅ | Reposts and quotes, showing the original post inline |
 | ✅ | `@mentions` rendered as names, tap to open that person's profile |
-| ✅ | Notifications: follows, tags, replies, reposts, mentions — the twelve kinds Nexus emits |
+| ✅ | Notifications with an unread badge: follows, tags, replies, reposts, mentions — the twelve kinds Nexus emits, each opening its post |
 | ✅ | **Publishing** a short post to your homeserver |
 | ✅ | French and English, switchable in-app |
 | ✅ | Long-form posts, whose content is JSON rather than text |
@@ -37,7 +37,6 @@ and building for iOS needs macOS.
 | ✅ | Opening a post: its labels in full, its replies, and **replying** |
 | ✅ | Translating **any** post, not only your own draft |
 | ✅ | Tapping a picture to see it full screen, zoomable |
-| ✅ | An unread count on the notifications icon |
 | ✅ | Built-in diagnostics for the authentication path |
 
 ### Not there yet
@@ -47,7 +46,7 @@ and building for iOS needs macOS.
 | ❌ | Tagging and bookmarking — within reach now that BLAKE3 is in Dart |
 | ❌ | Deleting or editing your own posts |
 | ❌ | Search |
-| ❌ | Push notifications (the tab polls; there is no background delivery) |
+| ❌ | Push notifications — the badge polls every two minutes; nothing is delivered in the background |
 | ❌ | Choosing your own homeserver — `homeserver.pubky.app` is assumed |
 | ❌ | Private messages — the tab is there, deliberately inert |
 | ❌ | iOS |
