@@ -979,12 +979,6 @@ abstract class L10n {
   /// **'Translating…'**
   String get composeTranslating;
 
-  /// No description provided for @composeTranslateFirstUse.
-  ///
-  /// In en, this message translates to:
-  /// **'The first translation into a language downloads its model, about 30 MB. It then works offline.'**
-  String get composeTranslateFirstUse;
-
   /// No description provided for @composeTranslateFailed.
   ///
   /// In en, this message translates to:
@@ -1081,12 +1075,6 @@ abstract class L10n {
   /// **'From'**
   String get composeTranslateFrom;
 
-  /// No description provided for @composeTranslateDetected.
-  ///
-  /// In en, this message translates to:
-  /// **'Detected'**
-  String get composeTranslateDetected;
-
   /// No description provided for @composeTranslateTarget.
   ///
   /// In en, this message translates to:
@@ -1105,11 +1093,83 @@ abstract class L10n {
   /// **'Mentions and links are left untouched — a translated key would no longer notify anyone.'**
   String get composeTranslateKeepsMentions;
 
+  /// No description provided for @composeTranslateAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Detect automatically'**
+  String get composeTranslateAuto;
+
+  /// No description provided for @composeTranslateQuota.
+  ///
+  /// In en, this message translates to:
+  /// **'The DeepL key has spent its monthly allowance. It resets with the billing month.'**
+  String get composeTranslateQuota;
+
+  /// No description provided for @settingsTranslation.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation'**
+  String get settingsTranslation;
+
   /// No description provided for @composeTranslateWorking.
   ///
   /// In en, this message translates to:
-  /// **'Translating… the first time into a language, a model is downloaded first.'**
+  /// **'Translating…'**
   String get composeTranslateWorking;
+
+  /// No description provided for @composeTranslateBadKey.
+  ///
+  /// In en, this message translates to:
+  /// **'DeepL refused the key. Check it in Settings, or clear it to fall back to the keyless service.'**
+  String get composeTranslateBadKey;
+
+  /// No description provided for @composeTranslateViaDeepL.
+  ///
+  /// In en, this message translates to:
+  /// **'Translated by DeepL with your key — the draft leaves the phone.'**
+  String get composeTranslateViaDeepL;
+
+  /// No description provided for @settingsDeepLKey.
+  ///
+  /// In en, this message translates to:
+  /// **'DeepL API key (optional)'**
+  String get settingsDeepLKey;
+
+  /// No description provided for @settingsDeepLKeyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'…:fx for a free key'**
+  String get settingsDeepLKeyHint;
+
+  /// No description provided for @settingsDeepLKeyNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation needs a key. DeepL\'s free plan covers 500,000 characters a month; a free key ends in “:fx”. Without one, the translate button says so instead of failing.'**
+  String get settingsDeepLKeyNote;
+
+  /// No description provided for @settingsDeepLChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking the key…'**
+  String get settingsDeepLChecking;
+
+  /// No description provided for @settingsDeepLValid.
+  ///
+  /// In en, this message translates to:
+  /// **'Key accepted — {used} of {limit} characters used.'**
+  String settingsDeepLValid(String used, String limit);
+
+  /// No description provided for @settingsDeepLInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'DeepL refused this key.'**
+  String get settingsDeepLInvalid;
+
+  /// No description provided for @composeTranslateNoKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation needs a DeepL key. Add one in Settings — the free plan covers 500,000 characters a month.'**
+  String get composeTranslateNoKey;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

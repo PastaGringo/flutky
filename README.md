@@ -32,7 +32,7 @@ and building for iOS needs macOS.
 | ✅ | An "Ask Jeb" shortcut — mention the AI account and its reply lands in your feed |
 | ✅ | Optionally folding your own posts into the Following feed |
 | ✅ | **Discover**: what the network tags most, ranked by engagement, plus accounts to follow |
-| ✅ | Translating a draft before posting — on-device, no key, no account, mentions left intact |
+| ✅ | Translating a draft before posting, with your own DeepL key — mentions and links left intact |
 | ✅ | Built-in diagnostics for the authentication path |
 
 ### Not there yet
@@ -67,6 +67,39 @@ Writing was supposed to need the Rust SDK. It does not:
 
 Both paths are in the app, and which one applies is read from the secret's own
 format rather than guessed.
+
+## Translation: two attempts that did not survive contact
+
+**Google ML Kit, on the device.** The best idea on paper — nothing left the
+phone, it worked offline. On a signed release where the plugin was
+demonstrably packaged (its channel name and method names are in `classes.dex`,
+its `.so` in the APK), the translator channel answered
+`MissingPluginException`. It also cost 19 MB and made the first translation
+into each language wait for a model download.
+
+Note the shape of that failure, because it is easy to misread: the exception
+named `closeLanguageTranslator`, which runs in a `finally`. An exception
+thrown there **replaces** the one that caused it, so the message named the
+cleanup rather than the call that actually failed.
+
+**MyMemory, keyless.** It translated well, needed no account at all, and its
+limits were measured rather than assumed: 500 characters per request (600
+answers `QUERY LENGTH LIMIT EXCEEDED`), 5 000 a day, and a refusal delivered
+inside an **HTTP 200** with `responseStatus: 403` in the body. It also
+answered 504 repeatedly under test. A feature that works when the service
+feels like it is worse than one that plainly asks for a key.
+
+**So: DeepL, with your own key.** 500 000 characters a month on the free plan,
+128 KiB per request so a whole draft goes in one call, and the source language
+detected server-side by omitting `source_lang`. The free host is deduced from
+the key: DeepL states that free keys "can be identified easily by the suffix
+`:fx`". Without a key the translate button says where to add one instead of
+failing.
+
+Measured, and worth knowing: `/v2/translate`, `/v2/usage` and a path that does
+not exist all answer **403** to a bad key. DeepL authenticates before routing,
+exactly like the Pubky homeserver — so a 403 proves nothing about whether a
+path exists.
 
 ## Three traps this codebase documents
 
@@ -105,10 +138,10 @@ lib/
     nexus.dart                 indexer client and models
     homeserver.dart            writing
     diagnostics.dart           authentication probes
-    translation.dart           on-device translation, protecting mentions
+    translation.dart           DeepL, protecting mentions and links
   screens/                     connect, feed, discover, notifications,
                                profile, compose, diagnostics, settings
-test/                          82 tests, offline and against the live network
+test/                          86 tests, offline and against the live network
   fixtures/                    untouched Nexus responses
 ```
 

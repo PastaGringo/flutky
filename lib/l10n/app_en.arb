@@ -295,7 +295,6 @@
   "composeTranslate": "Translate",
   "composeTranslateTo": "Translate into",
   "composeTranslating": "Translating…",
-  "composeTranslateFirstUse": "The first translation into a language downloads its model, about 30 MB. It then works offline.",
   "composeTranslateFailed": "Translation failed: {error}",
   "composeTranslateUndo": "Undo",
   "composeTranslateDone": "Translated — tap Undo to get your text back",
@@ -317,7 +316,6 @@
   "discoverEmpty": "Nothing to show right now. Pull down to try again.",
   "discoverEmptyTag": "Nothing carries #{tag} yet.",
   "composeTranslateFrom": "From",
-  "composeTranslateDetected": "Detected",
   "composeTranslateTarget": "To",
   "composeTranslateSameLanguage": "Pick two different languages",
   "composeTranslateKeepsMentions": "Mentions and links are left untouched — a translated key would no longer notify anyone.",
@@ -328,5 +326,27 @@
       }
     }
   },
-  "composeTranslateWorking": "Translating… the first time into a language, a model is downloaded first."
+  "composeTranslateAuto": "Detect automatically",
+  "composeTranslateQuota": "The DeepL key has spent its monthly allowance. It resets with the billing month.",
+  "settingsTranslation": "Translation",
+  "composeTranslateWorking": "Translating…",
+  "composeTranslateBadKey": "DeepL refused the key. Check it in Settings, or clear it to fall back to the keyless service.",
+  "composeTranslateViaDeepL": "Translated by DeepL with your key — the draft leaves the phone.",
+  "settingsDeepLKey": "DeepL API key (optional)",
+  "settingsDeepLKeyHint": "…:fx for a free key",
+  "settingsDeepLKeyNote": "Translation needs a key. DeepL's free plan covers 500,000 characters a month; a free key ends in “:fx”. Without one, the translate button says so instead of failing.",
+  "settingsDeepLChecking": "Checking the key…",
+  "settingsDeepLValid": "Key accepted — {used} of {limit} characters used.",
+  "settingsDeepLInvalid": "DeepL refused this key.",
+  "@settingsDeepLValid": {
+    "placeholders": {
+      "used": {
+        "type": "String"
+      },
+      "limit": {
+        "type": "String"
+      }
+    }
+  },
+  "composeTranslateNoKey": "Translation needs a DeepL key. Add one in Settings — the free plan covers 500,000 characters a month."
 }

@@ -520,10 +520,6 @@ class L10nEn extends L10n {
   String get composeTranslating => 'Translating…';
 
   @override
-  String get composeTranslateFirstUse =>
-      'The first translation into a language downloads its model, about 30 MB. It then works offline.';
-
-  @override
   String composeTranslateFailed(Object error) {
     return 'Translation failed: $error';
   }
@@ -579,9 +575,6 @@ class L10nEn extends L10n {
   String get composeTranslateFrom => 'From';
 
   @override
-  String get composeTranslateDetected => 'Detected';
-
-  @override
   String get composeTranslateTarget => 'To';
 
   @override
@@ -592,6 +585,48 @@ class L10nEn extends L10n {
       'Mentions and links are left untouched — a translated key would no longer notify anyone.';
 
   @override
-  String get composeTranslateWorking =>
-      'Translating… the first time into a language, a model is downloaded first.';
+  String get composeTranslateAuto => 'Detect automatically';
+
+  @override
+  String get composeTranslateQuota =>
+      'The DeepL key has spent its monthly allowance. It resets with the billing month.';
+
+  @override
+  String get settingsTranslation => 'Translation';
+
+  @override
+  String get composeTranslateWorking => 'Translating…';
+
+  @override
+  String get composeTranslateBadKey =>
+      'DeepL refused the key. Check it in Settings, or clear it to fall back to the keyless service.';
+
+  @override
+  String get composeTranslateViaDeepL =>
+      'Translated by DeepL with your key — the draft leaves the phone.';
+
+  @override
+  String get settingsDeepLKey => 'DeepL API key (optional)';
+
+  @override
+  String get settingsDeepLKeyHint => '…:fx for a free key';
+
+  @override
+  String get settingsDeepLKeyNote =>
+      'Translation needs a key. DeepL\'s free plan covers 500,000 characters a month; a free key ends in “:fx”. Without one, the translate button says so instead of failing.';
+
+  @override
+  String get settingsDeepLChecking => 'Checking the key…';
+
+  @override
+  String settingsDeepLValid(String used, String limit) {
+    return 'Key accepted — $used of $limit characters used.';
+  }
+
+  @override
+  String get settingsDeepLInvalid => 'DeepL refused this key.';
+
+  @override
+  String get composeTranslateNoKey =>
+      'Translation needs a DeepL key. Add one in Settings — the free plan covers 500,000 characters a month.';
 }

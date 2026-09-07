@@ -1,18 +1,111 @@
-import 'package:google_mlkit_language_id/google_mlkit_language_id.dart';
-import 'package:google_mlkit_translation/google_mlkit_translation.dart';
+/// Translating a draft before publishing it, through DeepL.
+///
+/// Two earlier attempts are worth recording, because both looked better than
+/// this one until they met reality.
+///
+/// **Google ML Kit, on the device.** The best idea on paper: nothing left the
+/// phone and it worked offline. It threw `MissingPluginException` on the
+/// translator channel of a signed release where the plugin was demonstrably
+/// packaged, cost 19 MB of APK, and made the first translation into each
+/// language wait for a model download.
+///
+/// **MyMemory, keyless.** It translated well and needed no account at all,
+/// which made the feature work on first launch. It also answered 504 several
+/// times in a row while being tested, capped a request at 500 characters, and
+/// allowed 5 000 a day. A feature that works when the service feels like it is
+/// worse than one that plainly asks for a key.
+///
+/// So: a key, and DeepL. 500 000 characters a month on its free plan, 128 KiB
+/// per request — so a whole draft goes in a single call — and the source
+/// language detected server-side. Without a key the button says what to do
+/// rather than failing.
+///
+/// **The draft leaves the device.** It is text on its way to a public post,
+/// which softens that, but it is not the same promise as on-device
+/// translation, and the interface says so.
+library;
 
-/// On-device translation, through Google's ML Kit.
-///
-/// Chosen over a web API on purpose: no key, no account, no quota, nothing
-/// sent to a third party, and it works offline. The cost is a language model
-/// downloaded once per language — around 30 MB — which is why the first
-/// translation into a new language takes a moment.
-///
-/// The source language is detected rather than asked for: a person writing a
-/// post already knows what language they are writing in, and making them say
-/// so is a question with an obvious answer.
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+
 /// The two languages a translation runs between, once settled.
-typedef TranslationChoice = ({TranslateLanguage from, TranslateLanguage to});
+typedef TranslationChoice = ({String from, String to});
+
+/// How much of the monthly allowance a key has spent.
+typedef DeepLUsage = ({int used, int limit});
+
+/// Stands for "let DeepL work it out", which it does when `source_lang` is
+/// omitted: "If this parameter is omitted, the API will attempt to detect the
+/// language of the text and translate it."
+const autoDetect = 'auto';
+
+/// DeepL publishes two hosts, and a free key is recognisable on sight: "DeepL
+/// API Free authentication keys can be identified easily by the suffix `:fx`".
+/// So the right host is deduced rather than asked for — one fewer setting to
+/// leave wrong.
+String deepLBase(String key) => key.trim().endsWith(':fx')
+    ? 'https://api-free.deepl.com'
+    : 'https://api.deepl.com';
+
+/// The languages offered, by their DeepL code.
+const translationLanguages = <String, String>{
+  'en': 'English',
+  'fr': 'Français',
+  'es': 'Español',
+  'de': 'Deutsch',
+  'it': 'Italiano',
+  'pt': 'Português',
+  'nl': 'Nederlands',
+  'pl': 'Polski',
+  'ru': 'Русский',
+  'ja': '日本語',
+  'zh': '中文',
+};
+
+String languageLabel(String code) =>
+    translationLanguages[code] ?? code.toUpperCase();
+
+/// DeepL wants upper case, and refuses a bare `EN` or `PT` as a *target*: it
+/// asks for the variant, because the two spellings genuinely differ.
+String deepLTarget(String code) => switch (code) {
+      'en' => 'EN-GB',
+      'pt' => 'PT-PT',
+      _ => code.toUpperCase(),
+    };
+
+/// The service refused the translation.
+class TranslationRefused implements Exception {
+  const TranslationRefused(
+    this.code,
+    this.message, {
+    this.quotaExhausted = false,
+    this.badKey = false,
+  });
+
+  final int code;
+  final String message;
+
+  /// DeepL answers **456** for this, not a generic 4xx. Singled out because it
+  /// is a failure the person can act on rather than retry.
+  final bool quotaExhausted;
+
+  /// The key itself was rejected, which no amount of retrying fixes.
+  final bool badKey;
+
+  @override
+  String toString() => message;
+}
+
+/// No key has been entered yet.
+///
+/// Its own type so the interface can point at the setting instead of showing
+/// an HTTP error for something that is not a failure at all.
+class TranslationKeyMissing implements Exception {
+  const TranslationKeyMissing();
+  @override
+  String toString() => 'aucune clé DeepL';
+}
 
 /// A stretch of text, and whether a translator may touch it.
 class TextRun {
@@ -48,114 +141,166 @@ List<TextRun> protectRuns(String text, RegExp protect) {
 }
 
 class Translator {
-  Translator({LanguageIdentifier? identifier})
-      : _identifier = identifier ??
-            LanguageIdentifier(confidenceThreshold: 0.5);
+  Translator({http.Client? client, String? deepLKey})
+      : _client = client ?? http.Client(),
+        deepLKey = (deepLKey ?? '').trim();
 
-  final LanguageIdentifier _identifier;
+  final http.Client _client;
 
-  /// Languages offered as targets. Kept short on purpose — every entry is a
-  /// model the user may end up downloading.
-  static const targets = [
-    TranslateLanguage.english,
-    TranslateLanguage.french,
-    TranslateLanguage.spanish,
-    TranslateLanguage.german,
-    TranslateLanguage.italian,
-    TranslateLanguage.portuguese,
-  ];
+  /// The key, or empty. Empty is not an error state — it is the state the app
+  /// starts in, and the compose sheet says so.
+  final String deepLKey;
 
-  /// Detected source language, or null when ML Kit is not confident enough.
-  ///
-  /// It answers the BCP-47 tag `und` for "undetermined" — treated as null
-  /// rather than passed on, since it is not a language anyone can translate
-  /// from.
-  Future<TranslateLanguage?> detect(String text) async {
-    if (text.trim().length < 8) return null; // too short to judge
-    try {
-      final code = await _identifier.identifyLanguage(text);
-      if (code == 'und') return null;
-      return BCP47Code.fromRawValue(code);
-    } catch (_) {
-      return null;
-    }
-  }
+  bool get ready => deepLKey.isNotEmpty;
 
-  /// Translates, downloading the models if needed.
-  ///
-  /// Returns the text unchanged when source and target are the same — calling
-  /// ML Kit for that would download a model to do nothing.
-  Future<String> translate(
-    String text, {
-    required TranslateLanguage from,
-    required TranslateLanguage to,
-  }) async {
-    if (from == to) return text;
-
-    final translator =
-        OnDeviceTranslator(sourceLanguage: from, targetLanguage: to);
-    try {
-      return await translator.translateText(text);
-    } finally {
-      // The plugin holds native resources: not closing it leaks them for the
-      // lifetime of the process.
-      await translator.close();
-    }
-  }
+  static const _timeout = Duration(seconds: 25);
 
   /// Translates everything except what [protect] matches.
   ///
-  /// Each translatable run goes through separately and is put back in place,
-  /// so the protected fragments keep their exact position — not merely their
+  /// The protected fragments keep their exact position, not merely their
   /// presence. Splitting a sentence around a mention costs a little fluency;
   /// letting the translator rewrite a key costs the mention itself.
+  ///
+  /// DeepL takes an array of texts within a 128 KiB request, so however many
+  /// pieces a draft breaks into, they all travel in one round trip.
   Future<String> translateProtecting(
     String text, {
-    required TranslateLanguage from,
-    required TranslateLanguage to,
+    required String from,
+    required String to,
     required RegExp protect,
   }) async {
+    if (!ready) throw const TranslationKeyMissing();
     if (from == to) return text;
+
     final runs = protectRuns(text, protect);
-    if (runs.every((r) => !r.translatable)) return text;
+    final indexes = <int>[
+      for (var i = 0; i < runs.length; i++)
+        if (runs[i].translatable && runs[i].text.trim().isNotEmpty) i,
+    ];
+    if (indexes.isEmpty) return text;
+
+    // Leading and trailing spaces never go to the service: they carry nothing
+    // to translate, and losing one would weld a mention onto the previous word
+    // — breaking the very match this protects.
+    final trimmed = {for (final i in indexes) i: _trim(runs[i].text)};
+    final translated = await _translate(
+      [for (final i in indexes) trimmed[i]!.body],
+      from: from,
+      to: to,
+    );
+
+    final byIndex = {
+      for (var n = 0; n < indexes.length; n++) indexes[n]: translated[n],
+    };
 
     final out = StringBuffer();
-    final translator =
-        OnDeviceTranslator(sourceLanguage: from, targetLanguage: to);
-    try {
-      for (final run in runs) {
-        if (!run.translatable || run.text.trim().isEmpty) {
-          out.write(run.text);
-          continue;
-        }
-        // Leading and trailing spaces are kept out of the call: some engines
-        // drop them, which would weld a mention onto the previous word and
-        // break the very match this protects.
-        final lead = RegExp(r'^\s*').firstMatch(run.text)!.group(0)!;
-        final tail = RegExp(r'\s*$').firstMatch(run.text)!.group(0)!;
-        final body = run.text.substring(lead.length, run.text.length - tail.length);
-        out
-          ..write(lead)
-          ..write(await translator.translateText(body))
-          ..write(tail);
+    for (var i = 0; i < runs.length; i++) {
+      final piece = byIndex[i];
+      if (piece == null) {
+        out.write(runs[i].text);
+        continue;
       }
-    } finally {
-      await translator.close();
+      out
+        ..write(trimmed[i]!.lead)
+        ..write(piece)
+        ..write(trimmed[i]!.tail);
     }
     return out.toString();
   }
 
-  Future<void> close() => _identifier.close();
-}
+  ({String lead, String body, String tail}) _trim(String text) {
+    final lead = RegExp(r'^\s*').firstMatch(text)!.group(0)!;
+    final tail = RegExp(r'\s*$').firstMatch(text)!.group(0)!;
+    return (
+      lead: lead,
+      body: text.substring(lead.length, text.length - tail.length),
+      tail: tail,
+    );
+  }
 
-/// Human label for a language, in that language — so the list reads the same
-/// whatever the interface language is.
-String languageLabel(TranslateLanguage language) => switch (language) {
-      TranslateLanguage.english => 'English',
-      TranslateLanguage.french => 'Français',
-      TranslateLanguage.spanish => 'Español',
-      TranslateLanguage.german => 'Deutsch',
-      TranslateLanguage.italian => 'Italiano',
-      TranslateLanguage.portuguese => 'Português',
-      _ => language.bcpCode.toUpperCase(),
-    };
+  Future<List<String>> _translate(
+    List<String> texts, {
+    required String from,
+    required String to,
+  }) async {
+    final res = await _client
+        .post(
+          Uri.parse('${deepLBase(deepLKey)}/v2/translate'),
+          headers: {
+            'Authorization': 'DeepL-Auth-Key $deepLKey',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'text': texts,
+            'target_lang': deepLTarget(to),
+            // Omitting the source is what asks DeepL to detect it.
+            if (from != autoDetect) 'source_lang': from.toUpperCase(),
+          }),
+        )
+        .timeout(_timeout);
+
+    _check(res.statusCode);
+
+    final decoded = jsonDecode(utf8.decode(res.bodyBytes));
+    final list =
+        decoded is Map<String, dynamic> ? decoded['translations'] : null;
+    if (list is! List || list.length != texts.length) {
+      throw const TranslationRefused(0, 'réponse DeepL inattendue');
+    }
+    return [
+      for (final entry in list)
+        entry is Map<String, dynamic> ? '${entry['text'] ?? ''}' : '',
+    ];
+  }
+
+  /// Reads what the key has spent this month.
+  ///
+  /// Used to check a key the moment it is typed: a key that cannot answer this
+  /// will not translate either, and learning that in the settings beats
+  /// learning it halfway through composing a post.
+  Future<DeepLUsage> checkUsage() async {
+    if (!ready) throw const TranslationKeyMissing();
+    final res = await _client.get(
+      Uri.parse('${deepLBase(deepLKey)}/v2/usage'),
+      headers: {'Authorization': 'DeepL-Auth-Key $deepLKey'},
+    ).timeout(_timeout);
+
+    _check(res.statusCode);
+
+    final decoded = jsonDecode(utf8.decode(res.bodyBytes));
+    if (decoded is! Map<String, dynamic>) {
+      throw const TranslationRefused(0, 'réponse DeepL inattendue');
+    }
+    return (
+      used: (decoded['character_count'] as num?)?.toInt() ?? 0,
+      limit: (decoded['character_limit'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  /// Turns a status code into the failure it actually means.
+  ///
+  /// 403 and 456 are the two a person can do something about, and they are
+  /// the two worth telling apart: one says the key is wrong, the other says
+  /// the month is spent.
+  ///
+  /// ⚠️ A 403 is **not** diagnostic of anything else. Measured against the
+  /// live host: `/v2/translate`, `/v2/usage` and `/v2/zzz` all answer 403 to a
+  /// bad key, so authentication runs before routing — exactly like the Pubky
+  /// homeserver. A 403 therefore cannot be read as proof that a path exists.
+  void _check(int status) {
+    switch (status) {
+      case 200:
+        return;
+      case 401:
+      case 403:
+        throw const TranslationRefused(403, 'clé refusée', badKey: true);
+      case 456:
+        throw const TranslationRefused(456, 'quota épuisé',
+            quotaExhausted: true);
+      default:
+        throw TranslationRefused(status, 'HTTP $status');
+    }
+  }
+
+  void close() => _client.close();
+}

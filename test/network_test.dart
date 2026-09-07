@@ -2,7 +2,9 @@
 // (`flutter test test/pubky_test.dart`) stays deterministic.
 //
 //   flutter test test/network_test.dart
+import 'package:flutky/pubky/mentions.dart';
 import 'package:flutky/pubky/nexus.dart';
+import 'package:flutky/pubky/translation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 
@@ -225,6 +227,62 @@ void main() {
         followed.map((p) => p.id).toList(),
         isNot(equals(influencers.map((p) => p.id).toList())),
         reason: 'deux classements identiques trahiraient un paramètre ignoré',
+      );
+    }, timeout: const Timeout(Duration(seconds: 60)));
+  });
+
+  group('DeepL', () {
+    // Exercised only when a key is supplied, since one cannot be invented:
+    //   flutter test --dart-define=DEEPL_KEY=xxxxxxxx:fx
+    // Without it the test says so rather than passing quietly, so a green run
+    // is never mistaken for a checked one.
+    const key = String.fromEnvironment('DEEPL_KEY');
+
+    test('translates, detects the source, and leaves a mention alone',
+        () async {
+      if (key.isEmpty) {
+        markTestSkipped('aucune clé : passer --dart-define=DEEPL_KEY=…');
+        return;
+      }
+      final translator = Translator(deepLKey: key);
+      addTearDown(translator.close);
+
+      const mention =
+          'pubky9o6xrx8wgqu48dmb47uep6w3dgbwdnf5jgw83gbeuxg9yi7x444y';
+      final out = await translator.translateProtecting(
+        'Bonjour $mention, le ciel est bleu ce matin.',
+        from: autoDetect,
+        to: 'en',
+        protect: RegExp(mentionPattern),
+      );
+
+      expect(out, contains(mention));
+      expect(out.toLowerCase(), contains('sky'));
+    }, timeout: const Timeout(Duration(seconds: 60)));
+
+    test('reports what the key has spent', () async {
+      if (key.isEmpty) {
+        markTestSkipped('aucune clé : passer --dart-define=DEEPL_KEY=…');
+        return;
+      }
+      final translator = Translator(deepLKey: key);
+      addTearDown(translator.close);
+
+      final usage = await translator.checkUsage();
+      expect(usage.limit, greaterThan(0));
+      expect(usage.used, lessThanOrEqualTo(usage.limit));
+    }, timeout: const Timeout(Duration(seconds: 60)));
+
+    test('a key that is not one is refused, and says so', () async {
+      final translator = Translator(deepLKey: 'ceci-nest-pas-une-cle:fx');
+      addTearDown(translator.close);
+
+      // The witness that the check discriminates: a wrong key must fail, or
+      // the two tests above would pass for a key that never worked.
+      await expectLater(
+        translator.checkUsage(),
+        throwsA(isA<TranslationRefused>()
+            .having((e) => e.badKey, 'badKey', isTrue)),
       );
     }, timeout: const Timeout(Duration(seconds: 60)));
   });

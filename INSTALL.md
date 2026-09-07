@@ -70,7 +70,7 @@ Nothing is typed, copied or pasted — the two apps talk over Android deep links
 | ✅ | Shows the feed: following, friends, global, bookmarks — with images |
 | ✅ | Renders `@mentions`, tap one to open that person's profile |
 | ✅ | **Discover**: popular posts, the labels in use, accounts to follow |
-| ✅ | Translates a draft on the device before you post it |
+| ✅ | Translates a draft before you post it, with your own DeepL key |
 | ✅ | Publishes short posts to your homeserver |
 | ❌ | Cannot yet follow, tag, reply, or attach an image |
 | ❌ | Cannot delete a post from the interface |

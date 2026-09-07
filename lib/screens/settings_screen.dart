@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+
+import '../pubky/translation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -87,6 +91,17 @@ class SettingsScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            Panel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _SectionTitle(l.settingsTranslation.toUpperCase()),
+                  const SizedBox(height: 10),
+                  _DeepLKeyField(preferences: preferences),
                 ],
               ),
             ),
@@ -217,4 +232,147 @@ class _SectionTitle extends StatelessWidget {
           color: kTextMuted,
         ),
       );
+}
+
+
+/// The DeepL key, checked against DeepL the moment typing stops.
+///
+/// A key field that only stores what it is given is a trap: the mistake shows
+/// up much later, in the middle of composing, as a refusal that looks like the
+/// feature being broken. Asking DeepL for the key's own usage answers two
+/// questions at once — whether it works, and how much of the month is left.
+class _DeepLKeyField extends StatefulWidget {
+  const _DeepLKeyField({required this.preferences});
+
+  final FeedPreferences preferences;
+
+  @override
+  State<_DeepLKeyField> createState() => _DeepLKeyFieldState();
+}
+
+class _DeepLKeyFieldState extends State<_DeepLKeyField> {
+  late final _controller =
+      TextEditingController(text: widget.preferences.deepLKey);
+
+  Timer? _debounce;
+  bool _checking = false;
+  DeepLUsage? _usage;
+  bool _refused = false;
+
+  /// Only the latest check may paint: typing a key character by character
+  /// starts several, and a slow early one must not overwrite a fast later one.
+  int _generation = 0;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onChanged(String value) {
+    widget.preferences.setDeepLKey(value);
+    _debounce?.cancel();
+    setState(() {
+      _usage = null;
+      _refused = false;
+    });
+    if (value.trim().isEmpty) return;
+    // Long enough that a check does not fire on every keystroke of a key being
+    // pasted or typed.
+    _debounce = Timer(const Duration(milliseconds: 700), _check);
+  }
+
+  Future<void> _check() async {
+    final generation = ++_generation;
+    final key = _controller.text.trim();
+    if (key.isEmpty) return;
+
+    setState(() => _checking = true);
+    final translator = Translator(deepLKey: key);
+    try {
+      final usage = await translator.checkUsage();
+      if (!mounted || generation != _generation) return;
+      setState(() {
+        _usage = usage;
+        _refused = false;
+      });
+    } catch (_) {
+      if (!mounted || generation != _generation) return;
+      setState(() {
+        _usage = null;
+        _refused = true;
+      });
+    } finally {
+      translator.close();
+      if (mounted && generation == _generation) {
+        setState(() => _checking = false);
+      }
+    }
+  }
+
+  Widget? _status(L10n l) {
+    if (_checking) return _note(l.settingsDeepLChecking, kTextMuted);
+    if (_refused) return _note(l.settingsDeepLInvalid, kDanger);
+    final usage = _usage;
+    if (usage == null) return null;
+    return _note(
+      l.settingsDeepLValid('${usage.used}', '${usage.limit}'),
+      kAccent,
+    );
+  }
+
+  Widget _note(String text, Color color) => Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Text(
+          text,
+          style: TextStyle(color: color, fontSize: 12.5, height: 1.4),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final l = L10n.of(context);
+    final status = _status(l);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: _controller,
+          autocorrect: false,
+          enableSuggestions: false,
+          onChanged: _onChanged,
+          style: const TextStyle(fontSize: 14, fontFamily: 'monospace'),
+          decoration: InputDecoration(
+            labelText: l.settingsDeepLKey,
+            labelStyle: const TextStyle(color: kTextMuted, fontSize: 13.5),
+            hintText: l.settingsDeepLKeyHint,
+            hintStyle: const TextStyle(color: kTextMuted),
+            filled: true,
+            fillColor: kBackground,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: kBorder),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: kBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: kAccent.withValues(alpha: 0.6)),
+            ),
+          ),
+        ),
+        ?status,
+        const SizedBox(height: 8),
+        Text(
+          l.settingsDeepLKeyNote,
+          style: const TextStyle(
+              color: kTextMuted, fontSize: 12.5, height: 1.45),
+        ),
+      ],
+    );
+  }
 }

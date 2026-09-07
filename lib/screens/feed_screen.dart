@@ -208,6 +208,10 @@ class _FeedScreenState extends State<FeedScreen> {
       context,
       session: widget.session,
       nexus: widget.nexus,
+      // The interface language is the likeliest target for a translation, and
+      // reading it here avoids threading the controller down another screen.
+      uiLanguage: Localizations.localeOf(context).languageCode,
+      deepLKey: widget.preferences.deepLKey,
       initialContent: initialContent,
     );
     if (published == null || !mounted) return;

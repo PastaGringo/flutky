@@ -520,10 +520,6 @@ class L10nFr extends L10n {
   String get composeTranslating => 'Traduction…';
 
   @override
-  String get composeTranslateFirstUse =>
-      'La première traduction vers une langue télécharge son modèle, environ 30 Mo. Ensuite tout se passe hors ligne.';
-
-  @override
   String composeTranslateFailed(Object error) {
     return 'Échec de la traduction : $error';
   }
@@ -579,9 +575,6 @@ class L10nFr extends L10n {
   String get composeTranslateFrom => 'Depuis';
 
   @override
-  String get composeTranslateDetected => 'Détecté';
-
-  @override
   String get composeTranslateTarget => 'Vers';
 
   @override
@@ -592,6 +585,48 @@ class L10nFr extends L10n {
       'Les mentions et les liens ne sont pas touchés — une clé traduite ne notifierait plus personne.';
 
   @override
-  String get composeTranslateWorking =>
-      'Traduction en cours… la première fois vers une langue, un modèle est téléchargé d\'abord.';
+  String get composeTranslateAuto => 'Détecter automatiquement';
+
+  @override
+  String get composeTranslateQuota =>
+      'La clé DeepL a épuisé son quota du mois. Il repart au mois suivant.';
+
+  @override
+  String get settingsTranslation => 'Traduction';
+
+  @override
+  String get composeTranslateWorking => 'Traduction en cours…';
+
+  @override
+  String get composeTranslateBadKey =>
+      'DeepL a refusé la clé. Vérifie-la dans les réglages, ou efface-la pour revenir au service sans clé.';
+
+  @override
+  String get composeTranslateViaDeepL =>
+      'Traduit par DeepL avec ta clé — le brouillon quitte le téléphone.';
+
+  @override
+  String get settingsDeepLKey => 'Clé d\'API DeepL (facultatif)';
+
+  @override
+  String get settingsDeepLKeyHint => '…:fx pour une clé gratuite';
+
+  @override
+  String get settingsDeepLKeyNote =>
+      'La traduction demande une clé. Le plan gratuit de DeepL couvre 500 000 caractères par mois ; une clé gratuite se termine par « :fx ». Sans clé, le bouton Traduire le dit au lieu d\'échouer.';
+
+  @override
+  String get settingsDeepLChecking => 'Vérification de la clé…';
+
+  @override
+  String settingsDeepLValid(String used, String limit) {
+    return 'Clé acceptée — $used caractères utilisés sur $limit.';
+  }
+
+  @override
+  String get settingsDeepLInvalid => 'DeepL a refusé cette clé.';
+
+  @override
+  String get composeTranslateNoKey =>
+      'La traduction demande une clé DeepL. Ajoute-la dans les réglages — le plan gratuit couvre 500 000 caractères par mois.';
 }

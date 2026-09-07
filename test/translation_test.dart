@@ -93,4 +93,33 @@ void main() {
       expect(alias.length, 25); // '@' plus 24
     });
   });
+
+  group('choosing where to send the request', () {
+    test('a free key picks the free host, on its suffix alone', () {
+      // DeepL: "Free authentication keys can be identified easily by the
+      // suffix :fx". Deducing it means there is no second setting to leave
+      // inconsistent with the key.
+      expect(deepLBase('abc-123:fx'), 'https://api-free.deepl.com');
+      expect(deepLBase('  abc-123:fx  '), 'https://api-free.deepl.com');
+      expect(deepLBase('abc-123'), 'https://api.deepl.com');
+    });
+
+    test('English and Portuguese targets carry their variant', () {
+      // A bare EN or PT is refused as a target: the two spellings differ, so
+      // DeepL asks which one.
+      expect(deepLTarget('en'), 'EN-GB');
+      expect(deepLTarget('pt'), 'PT-PT');
+      expect(deepLTarget('de'), 'DE');
+    });
+
+    test('without a key nothing is sent at all', () async {
+      final translator = Translator();
+      expect(translator.ready, isFalse);
+      await expectLater(
+        translator.translateProtecting('bonjour',
+            from: 'fr', to: 'en', protect: RegExp(r'(?!)')),
+        throwsA(isA<TranslationKeyMissing>()),
+      );
+    });
+  });
 }

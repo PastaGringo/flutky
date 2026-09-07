@@ -6,7 +6,6 @@ import '../pubky/homeserver.dart';
 import '../pubky/mentions.dart';
 import '../pubky/nexus.dart';
 import '../pubky/translation.dart';
-import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 import '../pubky/ring_session.dart';
 import '../theme.dart';
 
@@ -26,6 +25,8 @@ Future<PublishedPost?> showComposeSheet(
   BuildContext context, {
   required RingSession session,
   required NexusClient nexus,
+  required String uiLanguage,
+  String deepLKey = '',
   String initialContent = '',
 }) =>
     showModalBottomSheet<PublishedPost>(
@@ -39,6 +40,8 @@ Future<PublishedPost?> showComposeSheet(
       builder: (_) => _ComposeSheet(
         session: session,
         nexus: nexus,
+        uiLanguage: uiLanguage,
+        deepLKey: deepLKey,
         initialContent: initialContent,
       ),
     );
@@ -47,11 +50,15 @@ class _ComposeSheet extends StatefulWidget {
   const _ComposeSheet({
     required this.session,
     required this.nexus,
+    required this.uiLanguage,
+    required this.deepLKey,
     required this.initialContent,
   });
 
   final RingSession session;
   final NexusClient nexus;
+  final String uiLanguage;
+  final String deepLKey;
   final String initialContent;
 
   @override
@@ -77,7 +84,7 @@ class _ComposeSheetState extends State<_ComposeSheet> {
   bool? _canWrite;
   String? _accessError;
 
-  final _translator = Translator();
+  late final _translator = Translator(deepLKey: widget.deepLKey);
   bool _translating = false;
 
   /// Kept so a translation can be undone: replacing what someone wrote without
@@ -117,10 +124,12 @@ class _ComposeSheetState extends State<_ComposeSheet> {
       return;
     }
 
-    // Detected before the sheet opens, so it can show what it found instead
-    // of deciding silently — and be overridden when it got it wrong.
-    final detected = await _translator.detect(text);
-    if (!mounted) return;
+    if (!_translator.ready) {
+      // Not a failure: nothing has been set up yet. Saying where to go beats
+      // showing an authentication error for a key that was never entered.
+      setState(() => _error = l.composeTranslateNoKey);
+      return;
+    }
 
     final choice = await showModalBottomSheet<TranslationChoice>(
       context: context,
@@ -130,7 +139,7 @@ class _ComposeSheetState extends State<_ComposeSheet> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => _LanguagePicker(detected: detected),
+      builder: (_) => _LanguagePicker(defaultTarget: widget.uiLanguage),
     );
     if (choice == null || !mounted) return;
 
@@ -156,6 +165,16 @@ class _ComposeSheetState extends State<_ComposeSheet> {
           ),
         ),
       );
+    } on TranslationRefused catch (e) {
+      // The two refusals a person can act on say what to do; anything else
+      // shows the service's own wording, which at least names the cause.
+      if (mounted) {
+        setState(() => _error = switch (e) {
+              _ when e.badKey => l.composeTranslateBadKey,
+              _ when e.quotaExhausted => l.composeTranslateQuota,
+              _ => l.composeTranslateFailed(e.message),
+            });
+      }
     } catch (e) {
       if (mounted) setState(() => _error = l.composeTranslateFailed('$e'));
     } finally {
@@ -667,27 +686,24 @@ class _MentionPickerState extends State<_MentionPicker> {
 ///
 /// The first version translated the moment a target was tapped. Picking a
 /// language from a list does not read as « go »: it reads as picking a
-/// language, and nothing seemed to happen. So the sheet now says what it
-/// detected, lets that be corrected, and waits for a button.
+/// language, and nothing seemed to happen. So the sheet waits for a button.
 class _LanguagePicker extends StatefulWidget {
-  const _LanguagePicker({required this.detected});
+  const _LanguagePicker({required this.defaultTarget});
 
-  final TranslateLanguage? detected;
+  /// The interface language, offered as the target — the likeliest thing
+  /// someone wants to translate a foreign draft into.
+  final String defaultTarget;
 
   @override
   State<_LanguagePicker> createState() => _LanguagePickerState();
 }
 
 class _LanguagePickerState extends State<_LanguagePicker> {
-  /// ML Kit detects far more languages than the six offered as targets, and a
-  /// DropdownButton whose value is absent from its items throws rather than
-  /// degrading. So a detection outside the list is treated as no detection.
-  late TranslateLanguage _from =
-      Translator.targets.contains(widget.detected)
-          ? widget.detected!
-          : TranslateLanguage.english;
-  late TranslateLanguage _to = Translator.targets
-      .firstWhere((t) => t != _from, orElse: () => TranslateLanguage.english);
+  /// Detection happens server-side, so it costs nothing and is the default.
+  String _from = autoDetect;
+  late String _to = translationLanguages.containsKey(widget.defaultTarget)
+      ? widget.defaultTarget
+      : 'en';
 
   @override
   Widget build(BuildContext context) {
@@ -714,10 +730,9 @@ class _LanguagePickerState extends State<_LanguagePicker> {
             children: [
               Expanded(
                 child: _LanguageField(
-                  label: Translator.targets.contains(widget.detected)
-                      ? l.composeTranslateDetected
-                      : l.composeTranslateFrom,
+                  label: l.composeTranslateFrom,
                   value: _from,
+                  withAuto: true,
                   onChanged: (v) => setState(() => _from = v),
                 ),
               ),
@@ -730,6 +745,7 @@ class _LanguagePickerState extends State<_LanguagePicker> {
                 child: _LanguageField(
                   label: l.composeTranslateTarget,
                   value: _to,
+                  withAuto: false,
                   onChanged: (v) => setState(() => _to = v),
                 ),
               ),
@@ -737,13 +753,13 @@ class _LanguagePickerState extends State<_LanguagePicker> {
           ),
           const SizedBox(height: 14),
           Text(
-            l.composeTranslateFirstUse,
+            l.composeTranslateKeepsMentions,
             style: const TextStyle(
                 color: kTextMuted, fontSize: 12.5, height: 1.45),
           ),
           const SizedBox(height: 8),
           Text(
-            l.composeTranslateKeepsMentions,
+            l.composeTranslateViaDeepL,
             style: const TextStyle(
                 color: kTextMuted, fontSize: 12.5, height: 1.45),
           ),
@@ -754,7 +770,8 @@ class _LanguagePickerState extends State<_LanguagePicker> {
                 : () => Navigator.pop<TranslationChoice>(
                     context, (from: _from, to: _to)),
             icon: const Icon(Icons.translate_rounded, size: 18),
-            label: Text(same ? l.composeTranslateSameLanguage : l.composeTranslate),
+            label:
+                Text(same ? l.composeTranslateSameLanguage : l.composeTranslate),
           ),
         ],
       ),
@@ -766,46 +783,55 @@ class _LanguageField extends StatelessWidget {
   const _LanguageField({
     required this.label,
     required this.value,
+    required this.withAuto,
     required this.onChanged,
   });
 
   final String label;
-  final TranslateLanguage value;
-  final void Function(TranslateLanguage) onChanged;
+  final String value;
+  final bool withAuto;
+  final void Function(String) onChanged;
 
   @override
-  Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label,
-              style: const TextStyle(color: kTextMuted, fontSize: 11.5)),
-          const SizedBox(height: 5),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: kBackground,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: kBorder),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<TranslateLanguage>(
-                value: value,
-                isExpanded: true,
-                dropdownColor: kSurface,
-                style: const TextStyle(fontSize: 14.5, color: kText),
-                items: [
-                  for (final language in Translator.targets)
-                    DropdownMenuItem(
-                      value: language,
-                      child: Text(languageLabel(language)),
-                    ),
-                ],
-                onChanged: (v) {
-                  if (v != null) onChanged(v);
-                },
-              ),
+  Widget build(BuildContext context) {
+    final l = L10n.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: kTextMuted, fontSize: 11.5)),
+        const SizedBox(height: 5),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: kBackground,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: kBorder),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: value,
+              isExpanded: true,
+              dropdownColor: kSurface,
+              style: const TextStyle(fontSize: 14.5, color: kText),
+              items: [
+                if (withAuto)
+                  DropdownMenuItem(
+                    value: autoDetect,
+                    child: Text(l.composeTranslateAuto),
+                  ),
+                for (final entry in translationLanguages.entries)
+                  DropdownMenuItem(
+                    value: entry.key,
+                    child: Text(entry.value),
+                  ),
+              ],
+              onChanged: (v) {
+                if (v != null) onChanged(v);
+              },
             ),
           ),
-        ],
-      );
+        ),
+      ],
+    );
+  }
 }

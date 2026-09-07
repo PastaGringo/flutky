@@ -2,6 +2,34 @@
 
 ## À tester (récents en haut)
 
+### fix: la traduction passe à DeepL — v0.13.0 — 2026-09-07
+
+ML Kit est retiré : il échouait sur téléphone réel
+(`MissingPluginException`) et pesait 19 Mo. MyMemory, essayé ensuite, répondait
+504 par intermittence. La traduction demande maintenant **une clé DeepL**.
+
+- [ ] **Où** : Réglages → section *Traduction*
+  - **Étape** : créer une clé gratuite sur deepl.com (plan API Free), la coller
+  - **Attendu** : sous le champ, « Clé acceptée — N caractères utilisés sur
+    500000 » apparaît en vert au bout d'une seconde.
+
+- [ ] **Où** : même champ
+  - **Étape** : y coller n'importe quoi qui ne soit pas une clé
+  - **Attendu** : « DeepL a refusé cette clé » en rouge. C'est le témoin qui
+    prouve que la vérification vérifie quelque chose.
+
+- [ ] **Où** : fenêtre d'écriture, **sans** clé renseignée
+  - **Étape** : toucher *Traduire*
+  - **Attendu** : un message dit d'ajouter une clé dans les réglages. Aucune
+    erreur réseau, aucune tentative d'appel.
+
+- [ ] **Où** : fenêtre d'écriture, **avec** clé
+  - **Étape** : écrire une phrase contenant `@Jeb`, toucher *Traduire*,
+    laisser *Détecter automatiquement* en source
+  - **Attendu** : le texte est traduit et `@Jeb` est **inchangé**.
+    ⚠️ Chemin non éprouvé de mon côté : je n'ai pas de clé DeepL. C'est le
+    test qui compte le plus dans cette version.
+
 ### feat: découverte publique, notifications en haut, @Nom — v0.12.0 — 2026-09-07
 
 - [ ] **Où** : barre du bas
