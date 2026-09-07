@@ -2,6 +2,37 @@
 
 ## À tester (récents en haut)
 
+### build: distribution par Obtainium — v0.8.0 — 2026-09-07
+
+Release : https://github.com/PastaGringo/flutky/releases/tag/v0.8.0
+`fr.delvops.flutky` · versionCode **8** · signé `CN=Flutky, OU=Delvops`
+MD5 `c4a8b3e5db5d53bd3eee06e350dd0798`.
+
+**⚠️ Désinstaller l'app avant cette version.** Elle passe de la clé de débogage
+à un keystore de release : Android refuse une mise à jour dont la signature
+diffère. C'est la dernière fois — les suivantes se mettront à jour toutes
+seules. La session Pubky sera à refaire une fois via Ring.
+
+- [ ] **Où** : GitHub → Settings → Developer settings → Fine-grained tokens
+  - **Étape** : générer un jeton, *Only select repositories* → `flutky`,
+    *Repository permissions* → **Contents : Read-only**
+  - **Attendu** : le jeton s'affiche une seule fois — le copier tout de suite.
+
+- [ ] **Où** : Obtainium → ☰ Settings → Source-specific → GitHub
+  - **Étape** : coller le jeton dans *Personal Access Token*
+  - **Attendu** : rien de visible, mais sans lui l'étape suivante rendra
+    « aucune release » — un dépôt privé répond 404 à un appel anonyme, ce qui
+    ne ressemble pas à un refus d'accès.
+
+- [ ] **Où** : Obtainium → onglet *Add App*
+  - **Étape** : saisir `https://github.com/PastaGringo/flutky`, puis *Add*
+  - **Attendu** : Obtainium trouve **v0.8.0** et propose de l'installer.
+
+- [ ] **Où** : Obtainium, après une future publication
+  - **Étape** : rafraîchir la liste
+  - **Attendu** : la nouvelle version est détectée et s'installe **sans
+    désinstallation** — c'est ce qui valide la stabilité de la signature.
+
 ### fix: le secret exporté n'est pas la valeur du cookie — v0.7.0 — 2026-09-07
 
 APK : `fr.delvops.flutky` · versionCode **7** · signé avec la clé de débogage.
