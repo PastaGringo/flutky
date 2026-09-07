@@ -80,10 +80,7 @@ class _HomeShellState extends State<HomeShell> {
           child: IndexedStack(
             index: _tab,
             children: [
-              FeedScreen(
-                nexus: widget.nexus,
-                observerId: widget.session.pubky,
-              ),
+              FeedScreen(nexus: widget.nexus, session: widget.session),
               ProfileScreen(
                 session: widget.session,
                 profile: widget.profile,

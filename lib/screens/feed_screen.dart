@@ -1,13 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../pubky/mentions.dart';
 import '../pubky/nexus.dart';
+import '../pubky/ring_session.dart';
 import '../theme.dart';
+import 'compose_sheet.dart';
+import 'post_content.dart';
+import 'profile_sheet.dart';
 
 class FeedScreen extends StatefulWidget {
-  const FeedScreen({super.key, required this.nexus, required this.observerId});
+  const FeedScreen({super.key, required this.nexus, required this.session});
 
   final NexusClient nexus;
-  final String observerId;
+  final RingSession session;
 
   @override
   State<FeedScreen> createState() => _FeedScreenState();
@@ -18,7 +25,14 @@ class _FeedScreenState extends State<FeedScreen> {
 
   final _scroll = ScrollController();
   final _posts = <PubkyPost>[];
-  final _authors = <String, PubkyProfile>{};
+
+  /// Authors *and* mentioned accounts: a mention renders as a name only if its
+  /// profile is in here, so both are resolved in the same batch call.
+  final _profiles = <String, PubkyProfile>{};
+
+  /// Posts published from this device, kept in front of the stream until the
+  /// indexer catches up.
+  final _pending = <PubkyPost>[];
 
   FeedSource _source = FeedSource.following;
   bool _loading = false;
@@ -39,8 +53,7 @@ class _FeedScreenState extends State<FeedScreen> {
   }
 
   void _onScroll() {
-    if (_loading || _exhausted) return;
-    if (!_scroll.hasClients) return;
+    if (_loading || _exhausted || !_scroll.hasClients) return;
     final remaining = _scroll.position.maxScrollExtent - _scroll.position.pixels;
     if (remaining < 600) _loadMore();
   }
@@ -48,7 +61,6 @@ class _FeedScreenState extends State<FeedScreen> {
   Future<void> _reload() async {
     setState(() {
       _posts.clear();
-      _authors.clear();
       _exhausted = false;
       _error = null;
     });
@@ -59,22 +71,21 @@ class _FeedScreenState extends State<FeedScreen> {
     if (_loading || _exhausted) return;
     setState(() => _loading = true);
 
-    final skip = _posts.length;
     try {
       final page = await widget.nexus.fetchStream(
         source: _source,
-        observerId: widget.observerId,
+        observerId: widget.session.pubky,
         limit: _pageSize,
-        skip: skip,
+        skip: _posts.length,
       );
 
-      // Resolving authors is a second call, but a failure there must not lose
-      // the posts we already have: the timeline degrades to raw keys instead.
+      // Resolving names is a second call; a failure there must not lose the
+      // posts we already have — the timeline degrades to shortened keys.
       Map<String, PubkyProfile> resolved = const {};
-      final unknown = page
-          .map((p) => p.author)
-          .where((a) => a.isNotEmpty && !_authors.containsKey(a))
-          .toSet();
+      final unknown = <String>{
+        for (final post in page) ...{post.author, ...mentionedKeys(post.content)},
+      }..removeWhere((k) => k.isEmpty || _profiles.containsKey(k));
+
       if (unknown.isNotEmpty) {
         try {
           resolved = await widget.nexus.fetchUsersByIds(unknown);
@@ -86,7 +97,7 @@ class _FeedScreenState extends State<FeedScreen> {
       if (!mounted) return;
       setState(() {
         _posts.addAll(page);
-        _authors.addAll(resolved);
+        _profiles.addAll(resolved);
         _exhausted = page.length < _pageSize;
         _error = null;
       });
@@ -103,52 +114,98 @@ class _FeedScreenState extends State<FeedScreen> {
     _reload();
   }
 
+  Future<void> _compose() async {
+    final published = await showComposeSheet(context, session: widget.session);
+    if (published == null || !mounted) return;
+
+    // Optimistic: the post is on the homeserver — the sheet read it back — but
+    // Nexus has not seen it yet, so the stream cannot show it.
+    setState(() {
+      _pending.insert(
+        0,
+        PubkyPost(
+          id: published.id,
+          author: widget.session.pubky,
+          content: published.content,
+          kind: 'short',
+          attachments: const [],
+          counts: const {},
+          tags: const [],
+          indexedAt: DateTime.now(),
+        ),
+      );
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Publié. Le flux le montrera dès que Nexus aura indexé.'),
+      ),
+    );
+
+    // Nudge the indexer. Best effort: the post exists on the homeserver either
+    // way, and the pending card stays until a reload brings back the real one.
+    unawaited(widget.nexus.requestIngest(widget.session.pubky));
+  }
+
   @override
   Widget build(BuildContext context) {
     final err = _error;
-    final empty = _posts.isEmpty && !_loading && err == null;
+    final all = [..._pending, ..._posts];
+    final empty = all.isEmpty && !_loading && err == null;
 
-    return Column(
-      children: [
-        _SourceBar(current: _source, onPick: _switchSource),
-        if (err != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-            child: ErrorPanel(message: err),
-          ),
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: _reload,
-            child: empty
-                ? _EmptyState(source: _source)
-                : ListView.separated(
-                    controller: _scroll,
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
-                    itemCount: _posts.length + (_loading ? 1 : 0),
-                    separatorBuilder: (_, _) => const SizedBox(height: 12),
-                    itemBuilder: (context, i) {
-                      if (i >= _posts.length) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 22),
-                          child: Center(
-                            child: SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      floatingActionButton: FloatingActionButton(
+        onPressed: _compose,
+        backgroundColor: kAccent,
+        foregroundColor: const Color(0xFF04120E),
+        tooltip: 'Écrire un post',
+        child: const Icon(Icons.edit_rounded),
+      ),
+      body: Column(
+        children: [
+          _SourceBar(current: _source, onPick: _switchSource),
+          if (err != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+              child: ErrorPanel(message: err),
+            ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _reload,
+              child: empty
+                  ? _EmptyState(source: _source)
+                  : ListView.separated(
+                      controller: _scroll,
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 90),
+                      itemCount: all.length + (_loading ? 1 : 0),
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
+                      itemBuilder: (context, i) {
+                        if (i >= all.length) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 22),
+                            child: Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
                             ),
-                          ),
+                          );
+                        }
+                        final post = all[i];
+                        return PostCard(
+                          post: post,
+                          nexus: widget.nexus,
+                          profiles: _profiles,
+                          pending: i < _pending.length,
                         );
-                      }
-                      final post = _posts[i];
-                      return _PostCard(
-                        post: post,
-                        author: _authors[post.author],
-                      );
-                    },
-                  ),
+                      },
+                    ),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -236,15 +293,26 @@ class _EmptyState extends StatelessWidget {
       );
 }
 
-class _PostCard extends StatelessWidget {
-  const _PostCard({required this.post, required this.author});
+class PostCard extends StatelessWidget {
+  const PostCard({
+    super.key,
+    required this.post,
+    required this.nexus,
+    required this.profiles,
+    this.pending = false,
+  });
 
   final PubkyPost post;
-  final PubkyProfile? author;
+  final NexusClient nexus;
+  final Map<String, PubkyProfile> profiles;
+
+  /// Published from this device and not yet visible through the indexer.
+  final bool pending;
 
   @override
   Widget build(BuildContext context) {
     final images = post.imageUrls();
+    final author = profiles[post.author];
     final name = author?.name ?? _shortKey(post.author);
     final replies = post.counts['replies'] ?? 0;
     final tags = post.counts['tags'] ?? 0;
@@ -257,22 +325,31 @@ class _PostCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              ClipOval(
-                child: Image.network(
-                  '$nexusBase/static/avatar/${post.author}',
-                  width: 36,
-                  height: 36,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Container(
+              InkWell(
+                onTap: () => showProfileSheet(
+                  context,
+                  nexus: nexus,
+                  pubky: post.author,
+                  known: author,
+                ),
+                borderRadius: BorderRadius.circular(999),
+                child: ClipOval(
+                  child: Image.network(
+                    '$nexusBase/static/avatar/${post.author}',
                     width: 36,
                     height: 36,
-                    color: kBackground,
-                    alignment: Alignment.center,
-                    child: Text(
-                      name.characters.first.toUpperCase(),
-                      style: const TextStyle(
-                        color: kAccent,
-                        fontWeight: FontWeight.w700,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Container(
+                      width: 36,
+                      height: 36,
+                      color: kBackground,
+                      alignment: Alignment.center,
+                      child: Text(
+                        name.characters.first.toUpperCase(),
+                        style: const TextStyle(
+                          color: kAccent,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
@@ -293,8 +370,13 @@ class _PostCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      _relative(post.indexedAt),
-                      style: const TextStyle(color: kTextMuted, fontSize: 12),
+                      pending
+                          ? "publié à l'instant · en attente d'indexation"
+                          : _relative(post.indexedAt),
+                      style: TextStyle(
+                        color: pending ? kAccent : kTextMuted,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
@@ -316,9 +398,10 @@ class _PostCard extends StatelessWidget {
           ),
           if (post.content.isNotEmpty) ...[
             const SizedBox(height: 12),
-            SelectableText(
-              post.content,
-              style: const TextStyle(height: 1.5, fontSize: 14.5),
+            PostContent(
+              content: post.content,
+              nexus: nexus,
+              knownProfiles: profiles,
             ),
           ],
           if (images.isNotEmpty) ...[
@@ -366,9 +449,9 @@ class _PostCard extends StatelessWidget {
     if (d == null) return '';
     final diff = DateTime.now().difference(d);
     if (diff.inMinutes < 1) return "à l'instant";
-    if (diff.inMinutes < 60) return 'il y a ${diff.inMinutes} min';
-    if (diff.inHours < 24) return 'il y a ${diff.inHours} h';
-    if (diff.inDays < 30) return 'il y a ${diff.inDays} j';
+    if (diff.inMinutes < 60) return 'il y a ${diff.inMinutes} min';
+    if (diff.inHours < 24) return 'il y a ${diff.inHours} h';
+    if (diff.inDays < 30) return 'il y a ${diff.inDays} j';
     String two(int n) => n.toString().padLeft(2, '0');
     return '${two(d.day)}/${two(d.month)}/${d.year}';
   }

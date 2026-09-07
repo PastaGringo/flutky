@@ -2,84 +2,74 @@
 
 ## À tester (récents en haut)
 
-### feat: flux Nexus et session persistante — v0.3.0 — 2026-09-07
+### feat: mentions cliquables et écriture de posts — v0.4.0 — 2026-09-07
 
-APK : `fr.delvops.flutky` · versionCode **3** · signé avec la clé de débogage.
+APK : `fr.delvops.flutky` · versionCode **4** · signé avec la clé de débogage.
 
-**Session persistante** — c'est le point qui demande de tuer l'app, pas
-seulement de la mettre en arrière-plan :
+**Écrire un post — le point vraiment incertain.** Je n'ai pas pu l'éprouver :
+il faut une session valide, donc ton compte. Deux issues possibles, et la
+seconde n'est pas un échec du travail mais une limite connue :
 
-- [ ] **Où** : n'importe quel écran, après s'être connecté
-  - **Étape** : fermer complètement Flutky (balayer depuis les applications
-    récentes), puis la rouvrir
-  - **Attendu** : elle revient directement sur le flux, **sans repasser par
-    Pubky Ring**. Un bref indicateur de chargement est normal.
+- [ ] **Où** : onglet « Flux », bouton flottant en bas à droite
+  - **Étape** : écrire quelques mots, appuyer sur « Publier »
+  - **Attendu (cas favorable)** : la feuille se ferme, le post apparaît en tête
+    du flux avec la mention « en attente d'indexation », et un bandeau confirme.
+    Vérifier ensuite sur **pubky.app** que le post y est bien.
+  - **Attendu (cas défavorable)** : un message d'erreur détaillé, avec le code
+    HTTP et la réponse brute du serveur. **Copie-le moi tel quel** — c'est ce
+    qui dira si c'est le type de session ou l'adresse d'écriture.
 
-- [ ] **Où** : bouton de déconnexion, en haut à droite
-  - **Étape** : appuyer, lire la confirmation, valider
-  - **Attendu** : retour à l'écran de connexion. Refermer et rouvrir l'app :
-    elle doit redemander Ring — la session ne doit pas ressusciter.
+- [ ] **Où** : feuille de composition
+  - **Étape** : coller un texte de plus de 2 000 caractères
+  - **Attendu** : le compteur passe en rouge et « Publier » se désactive, sans
+    aller déranger le serveur.
 
-- [ ] **Où** : redémarrage complet du téléphone
-  - **Étape** : redémarrer, rouvrir Flutky
-  - **Attendu** : la session tient toujours (le secret est dans le keystore
-    Android, pas en mémoire).
+**Mentions** :
 
-**Flux** :
+- [ ] **Où** : onglet « Flux », un post contenant une mention
+  - **Étape** : repérer un post du type « Hey @Quelqu'un, … »
+  - **Attendu** : la mention s'affiche comme **@Nom** en vert, pas comme une
+    suite de 57 caractères. Si le profil n'est pas résolu, une clé abrégée
+    (`abc123…wxyz`), jamais le bloc complet.
 
-- [ ] **Où** : onglet « Flux », filtre « Abonnements » (par défaut)
-  - **Étape** : comparer avec le fil de pubky.app
-  - **Attendu** : les mêmes publications, avec avatar et nom d'auteur résolus
-    (pas une clé de 52 caractères).
+- [ ] **Où** : une mention @Nom
+  - **Étape** : appuyer dessus
+  - **Attendu** : une feuille s'ouvre avec l'avatar, le nom, le statut, la bio
+    et les compteurs de la personne citée.
 
-- [ ] **Où** : onglet « Flux »
-  - **Étape** : faire défiler jusqu'en bas
-  - **Attendu** : la page suivante se charge toute seule, sans doublon ni
-    saut. L'indicateur apparaît en bas pendant le chargement.
+- [ ] **Où** : l'avatar ou le nom d'un auteur de post
+  - **Étape** : appuyer sur l'avatar
+  - **Attendu** : la même feuille de profil s'ouvre.
 
-- [ ] **Où** : filtres « Amis », « Global », « Favoris »
-  - **Étape** : passer de l'un à l'autre
-  - **Attendu** : le contenu change à chaque fois ; « Abonnements » et
-    « Global » ne doivent pas afficher la même liste.
+- [ ] **Où** : un post contenant un lien https
+  - **Étape** : appuyer sur le lien
+  - **Attendu** : il s'ouvre dans le navigateur ; le lien est souligné dans le
+    texte.
 
-- [ ] **Où** : un post portant une ou plusieurs images
-  - **Étape** : repérer un post marqué `image`
-  - **Attendu** : la ou les images s'affichent ; plusieurs images défilent
-    horizontalement.
+**Reste du parcours, non encore éprouvé** :
 
-- [ ] **Où** : onglet « Flux », puis « Profil », puis retour au flux
-  - **Étape** : faire défiler le flux, passer sur le profil, revenir
-  - **Attendu** : le flux a gardé sa position et ses pages déjà chargées.
-
-- [ ] **Où** : onglet « Flux », mode avion
-  - **Étape** : activer le mode avion et tirer pour rafraîchir
-  - **Attendu** : un message d'erreur lisible au-dessus de la liste, pas un
-    écran vide ni un plantage.
-
-**Reste du parcours initial, non encore éprouvé** :
+- [ ] **Où** : session persistante
+  - **Étape** : tuer complètement l'app (balayage depuis les récentes), rouvrir
+  - **Attendu** : retour direct sur le flux, sans repasser par Ring.
 
 - [ ] **Où** : Pubky Ring, écran de confirmation
-  - **Étape** : relancer une connexion et lire l'écran avant d'approuver
-  - **Attendu** : Ring affiche « Flutky » comme application demandeuse.
-
-- [ ] **Où** : Pubky Ring, écran de confirmation
-  - **Étape** : annuler au lieu d'approuver
-  - **Attendu** : « Connexion annulée dans Pubky Ring. »
-
-- [ ] **Où** : onglet « Profil », bas de page
-  - **Étape** : dérouler jusqu'aux sections « Liens », « Tags reçus » et
-    « Session Ring »
-  - **Attendu** : les liens s'ouvrent ; la carte Session n'affiche **que la
-    longueur** du secret, jamais sa valeur.
+  - **Étape** : relancer une connexion, lire l'écran, puis annuler
+  - **Attendu** : Ring affiche « Flutky » comme demandeur ; l'annulation donne
+    « Connexion annulée dans Pubky Ring. »
 
 - [ ] **Où** : version de Pubky Ring installée
   - **Étape** : Ring → À propos, relever le numéro
-  - **Attendu** : information à consigner — elle dira si le blocage de la
-    v0.1.0 venait du renommage `session_secret` → `grant_secret` (Ring ≤ 1.18)
-    ou de l'hôte du lien de retour. Les deux corrections ayant été livrées
-    ensemble, on ne sait pas encore laquelle a débloqué.
+  - **Attendu** : information à consigner. Elle dira du même coup si l'écriture
+    a une chance de marcher : un Ring **≤ 1.18** rend un `session_secret` de
+    type cookie, que cette version sait présenter ; un Ring **≥ 1.19** rend un
+    `grant_secret`, qui exige un jeton signé qu'elle ne sait pas produire.
 
 ## ✅ Validés
+
+### feat: flux Nexus et session persistante — v0.3.0 — validé le 2026-09-07
+
+- [x] **Où** : onglet « Flux » → **Attendu** : le flux s'affiche avec avatars
+  et noms d'auteurs résolus (validé le 2026-09-07)
 
 ### feat: parcours principal du POC — v0.2.0 — validé le 2026-09-07
 
