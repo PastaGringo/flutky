@@ -1038,6 +1038,78 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Follow the work'**
   String get messagesWipFollow;
+
+  /// No description provided for @tabDiscover.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover'**
+  String get tabDiscover;
+
+  /// No description provided for @titleDiscover.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover'**
+  String get titleDiscover;
+
+  /// No description provided for @discoverPopular.
+  ///
+  /// In en, this message translates to:
+  /// **'Popular'**
+  String get discoverPopular;
+
+  /// No description provided for @discoverPeople.
+  ///
+  /// In en, this message translates to:
+  /// **'PEOPLE TO DISCOVER'**
+  String get discoverPeople;
+
+  /// No description provided for @discoverEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to show right now. Pull down to try again.'**
+  String get discoverEmpty;
+
+  /// No description provided for @discoverEmptyTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing carries #{tag} yet.'**
+  String discoverEmptyTag(String tag);
+
+  /// No description provided for @composeTranslateFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get composeTranslateFrom;
+
+  /// No description provided for @composeTranslateDetected.
+  ///
+  /// In en, this message translates to:
+  /// **'Detected'**
+  String get composeTranslateDetected;
+
+  /// No description provided for @composeTranslateTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get composeTranslateTarget;
+
+  /// No description provided for @composeTranslateSameLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick two different languages'**
+  String get composeTranslateSameLanguage;
+
+  /// No description provided for @composeTranslateKeepsMentions.
+  ///
+  /// In en, this message translates to:
+  /// **'Mentions and links are left untouched — a translated key would no longer notify anyone.'**
+  String get composeTranslateKeepsMentions;
+
+  /// No description provided for @composeTranslateWorking.
+  ///
+  /// In en, this message translates to:
+  /// **'Translating… the first time into a language, a model is downloaded first.'**
+  String get composeTranslateWorking;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

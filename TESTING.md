@@ -2,6 +2,44 @@
 
 ## À tester (récents en haut)
 
+### feat: découverte publique, notifications en haut, @Nom — v0.12.0 — 2026-09-07
+
+- [ ] **Où** : barre du bas
+  - **Étape** : repérer l'onglet **Découverte** à la place de Notifications
+  - **Attendu** : quatre onglets — Flux, Découverte, PM (WIP), Profil.
+
+- [ ] **Où** : barre du haut, icône cloche à gauche des autres
+  - **Étape** : la toucher
+  - **Attendu** : l'écran Notifications s'ouvre en page, avec un bouton retour.
+    Le contenu est le même qu'avant.
+
+- [ ] **Où** : onglet Découverte
+  - **Étape** : regarder le haut de la liste, puis toucher un avatar
+  - **Attendu** : une rangée de comptes à découvrir ; toucher l'un d'eux ouvre
+    sa fiche, avec le bouton Suivre.
+
+- [ ] **Où** : onglet Découverte, bandeau de libellés
+  - **Étape** : toucher `#bitcoin`, puis revenir sur *Populaire*
+  - **Attendu** : la liste ne montre que des posts portant ce libellé, et
+    *Populaire* rend une liste différente du flux chronologique.
+
+- [ ] **Où** : fenêtre d'écriture, bouton *Ask Jeb*
+  - **Étape** : le toucher
+  - **Attendu** : le champ affiche **`@Jeb`**, pas une clé de 52 caractères.
+    Le compteur de caractères compte tout de même les 57 réels.
+
+- [ ] **Où** : même fenêtre, après avoir inséré `@Jeb`
+  - **Étape** : publier, puis ouvrir le post dans le flux
+  - **Attendu** : la mention est bien active — c'est le contrôle qui prouve
+    que la substitution à la publication a fonctionné. ⚠️ Non éprouvé de mon
+    côté : je ne peux pas publier depuis ton compte.
+
+- [ ] **Où** : même fenêtre, bouton *Traduire*
+  - **Étape** : écrire une phrase contenant `@Jeb`, toucher *Traduire*
+  - **Attendu** : une fiche s'ouvre avec **deux menus** (source détectée et
+    cible) et un **bouton Traduire** — rien ne part avant qu'on le touche.
+    Après traduction, `@Jeb` est **inchangé** au milieu du texte traduit.
+
 ### feat: traduction du brouillon, onglet PM inerte, articles cités — v0.11.0 — 2026-09-07
 
 - [ ] **Où** : fenêtre d'écriture d'un post

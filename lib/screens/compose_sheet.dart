@@ -3,6 +3,7 @@ import '../l10n/app_localizations.dart';
 
 import '../pubky/grant_auth.dart';
 import '../pubky/homeserver.dart';
+import '../pubky/mentions.dart';
 import '../pubky/nexus.dart';
 import '../pubky/translation.dart';
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
@@ -62,6 +63,15 @@ class _ComposeSheetState extends State<_ComposeSheet> {
   bool _sending = false;
   String? _error;
 
+  /// What the editor shows for a mention, mapped to the key it stands for.
+  ///
+  /// A mention on the wire is `pubky` plus 52 characters. Leaving that in the
+  /// text field means writing around a 57-character blob, so the editor shows
+  /// `@Name` and the substitution happens once, at publish. Edit or delete the
+  /// alias and the mention simply does not happen — which is what deleting
+  /// it meant.
+  final _aliases = <String, String>{};
+
   /// Result of minting a token before the user types anything: publishing is
   /// worth attempting only if the homeserver already accepts our credentials.
   bool? _canWrite;
@@ -74,6 +84,29 @@ class _ComposeSheetState extends State<_ComposeSheet> {
   /// a way back is a destructive edit, however good the translation is.
   String? _beforeTranslation;
 
+  /// What actually gets published: aliases swapped back for their wire form.
+  ///
+  /// Longest first, so `@Jeb` cannot eat the start of `@Jeb-9o6x`. The
+  /// replacement contains no `@`, so no substitution can feed another.
+  String _wireContent() {
+    var text = _controller.text;
+    for (final alias in _aliasesLongestFirst()) {
+      text = text.replaceAll(alias, 'pubky${_aliases[alias]}');
+    }
+    return text.trim();
+  }
+
+  List<String> _aliasesLongestFirst() => _aliases.keys.toList()
+    ..sort((a, b) => b.length.compareTo(a.length));
+
+  /// Everything a translation must leave alone: the aliases on screen, any raw
+  /// mention someone pasted in, and links.
+  RegExp _protectedPattern() => RegExp([
+        for (final alias in _aliasesLongestFirst()) RegExp.escape(alias),
+        mentionPattern,
+        linkPattern,
+      ].join('|'));
+
   Future<void> _translate() async {
     final text = _controller.text.trim();
     final l = L10n.of(context);
@@ -84,26 +117,30 @@ class _ComposeSheetState extends State<_ComposeSheet> {
       return;
     }
 
-    final target = await showModalBottomSheet<TranslateLanguage>(
+    // Detected before the sheet opens, so it can show what it found instead
+    // of deciding silently — and be overridden when it got it wrong.
+    final detected = await _translator.detect(text);
+    if (!mounted) return;
+
+    final choice = await showModalBottomSheet<TranslationChoice>(
       context: context,
       backgroundColor: kSurface,
+      isScrollControlled: true,
       showDragHandle: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => const _LanguagePicker(),
+      builder: (_) => _LanguagePicker(detected: detected),
     );
-    if (target == null || !mounted) return;
+    if (choice == null || !mounted) return;
 
     setState(() => _translating = true);
     try {
-      // The source is detected: someone writing a post knows what language
-      // they used, and asking would be a question with an obvious answer.
-      final source = await _translator.detect(text) ?? TranslateLanguage.english;
-      final translated = await _translator.translate(
-        text,
-        from: source,
-        to: target,
+      final translated = await _translator.translateProtecting(
+        _controller.text,
+        from: choice.from,
+        to: choice.to,
+        protect: _protectedPattern(),
       );
       if (!mounted) return;
       setState(() {
@@ -159,23 +196,24 @@ class _ComposeSheetState extends State<_ComposeSheet> {
   }
 
 
-  /// Inserts a mention at the caret.
+  /// Inserts a mention at the caret, shown as `@Name`.
   ///
-  /// The wire format is the literal `pubky` followed by the key, with no
-  /// separator — the @Name a reader sees is a rendering, not what is stored.
-  /// Spaces are added around it so it never welds onto a neighbouring word,
-  /// which would break the 52-character match.
-  void _insertMention(String pubky) {
+  /// Spaces are added around it so it never welds onto a neighbouring word: on
+  /// the wire the match is anchored on exactly 52 characters, and here the
+  /// substitution is on the exact alias — both break if it touches a word.
+  void _insertMention(String pubky, String name) {
+    final alias = aliasForMention(pubky, name, _aliases);
     final text = _controller.text;
     final sel = _controller.selection;
     final at = sel.isValid ? sel.start : text.length;
 
     final before = text.substring(0, at);
     final after = text.substring(at);
-    final needsLeading = before.isNotEmpty && !before.endsWith(" ");
-    final token = '${needsLeading ? ' ' : ''}pubky$pubky ';
+    final needsLeading = before.isNotEmpty && !before.endsWith(' ');
+    final token = '${needsLeading ? ' ' : ''}$alias ';
 
     setState(() {
+      _aliases[alias] = pubky;
       _controller.value = TextEditingValue(
         text: before + token + after,
         selection: TextSelection.collapsed(offset: (before + token).length),
@@ -184,7 +222,7 @@ class _ComposeSheetState extends State<_ComposeSheet> {
   }
 
   Future<void> _pickMention() async {
-    final picked = await showModalBottomSheet<String>(
+    final picked = await showModalBottomSheet<PubkyProfile>(
       context: context,
       backgroundColor: kSurface,
       isScrollControlled: true,
@@ -194,7 +232,7 @@ class _ComposeSheetState extends State<_ComposeSheet> {
       ),
       builder: (_) => _MentionPicker(nexus: widget.nexus),
     );
-    if (picked != null) _insertMention(picked);
+    if (picked != null) _insertMention(picked.id, picked.name);
   }
 
   @override
@@ -205,7 +243,7 @@ class _ComposeSheetState extends State<_ComposeSheet> {
   }
 
   Future<void> _publish() async {
-    final content = _controller.text.trim();
+    final content = _wireContent();
     if (content.isEmpty || _sending) return;
 
     setState(() {
@@ -238,7 +276,9 @@ class _ComposeSheetState extends State<_ComposeSheet> {
   @override
   Widget build(BuildContext context) {
     final l = L10n.of(context);
-    final length = _controller.text.trim().length;
+    // Counted on what will be published, not on what is displayed: an alias is
+    // a handful of characters standing for fifty-seven.
+    final length = _wireContent().length;
     final tooLong = length > maxShortPostLength;
     final err = _error;
 
@@ -283,7 +323,8 @@ class _ComposeSheetState extends State<_ComposeSheet> {
               _ComposeAction(
                 icon: Icons.smart_toy_outlined,
                 label: l.composeAskJeb,
-                onTap: _sending ? null : () => _insertMention(jebPubky),
+                onTap:
+                    _sending ? null : () => _insertMention(jebPubky, 'Jeb'),
               ),
               const SizedBox(width: 8),
               _ComposeAction(
@@ -301,6 +342,29 @@ class _ComposeSheetState extends State<_ComposeSheet> {
               ],
             ],
           ),
+          if (_translating) ...[
+            const SizedBox(height: 10),
+            // The first translation into a language downloads a model, which
+            // takes seconds with nothing to look at. A chip label changing to
+            // "Translating…" is too quiet to read as "something is happening".
+            Row(
+              children: [
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    l.composeTranslateWorking,
+                    style: const TextStyle(
+                        color: kTextMuted, fontSize: 12.5, height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 12),
           TextField(
             controller: _controller,
@@ -588,7 +652,7 @@ class _MentionPickerState extends State<_MentionPicker> {
                         fontFamily: "monospace",
                       ),
                     ),
-                    onTap: () => Navigator.pop(context, profile.id),
+                    onTap: () => Navigator.pop(context, profile),
                   );
                 },
               ),
@@ -599,40 +663,149 @@ class _MentionPickerState extends State<_MentionPicker> {
   }
 }
 
-/// Target language for a translation. The source is detected, so this is the
-/// only choice to make.
-class _LanguagePicker extends StatelessWidget {
-  const _LanguagePicker();
+/// Both languages, then an explicit button.
+///
+/// The first version translated the moment a target was tapped. Picking a
+/// language from a list does not read as « go »: it reads as picking a
+/// language, and nothing seemed to happen. So the sheet now says what it
+/// detected, lets that be corrected, and waits for a button.
+class _LanguagePicker extends StatefulWidget {
+  const _LanguagePicker({required this.detected});
+
+  final TranslateLanguage? detected;
+
+  @override
+  State<_LanguagePicker> createState() => _LanguagePickerState();
+}
+
+class _LanguagePickerState extends State<_LanguagePicker> {
+  /// ML Kit detects far more languages than the six offered as targets, and a
+  /// DropdownButton whose value is absent from its items throws rather than
+  /// degrading. So a detection outside the list is treated as no detection.
+  late TranslateLanguage _from =
+      Translator.targets.contains(widget.detected)
+          ? widget.detected!
+          : TranslateLanguage.english;
+  late TranslateLanguage _to = Translator.targets
+      .firstWhere((t) => t != _from, orElse: () => TranslateLanguage.english);
 
   @override
   Widget build(BuildContext context) {
     final l = L10n.of(context);
+    final same = _from == _to;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        bottom: 24 + MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             l.composeTranslateTo,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 16),
+            style:
+                Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 16),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _LanguageField(
+                  label: Translator.targets.contains(widget.detected)
+                      ? l.composeTranslateDetected
+                      : l.composeTranslateFrom,
+                  value: _from,
+                  onChanged: (v) => setState(() => _from = v),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 10),
+                child: Icon(Icons.arrow_forward_rounded,
+                    size: 18, color: kTextMuted),
+              ),
+              Expanded(
+                child: _LanguageField(
+                  label: l.composeTranslateTarget,
+                  value: _to,
+                  onChanged: (v) => setState(() => _to = v),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
           Text(
             l.composeTranslateFirstUse,
-            style: const TextStyle(color: kTextMuted, fontSize: 12.5, height: 1.45),
+            style: const TextStyle(
+                color: kTextMuted, fontSize: 12.5, height: 1.45),
           ),
           const SizedBox(height: 8),
-          for (final language in Translator.targets)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(languageLabel(language),
-                  style: const TextStyle(fontSize: 15)),
-              onTap: () => Navigator.pop(context, language),
-            ),
+          Text(
+            l.composeTranslateKeepsMentions,
+            style: const TextStyle(
+                color: kTextMuted, fontSize: 12.5, height: 1.45),
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: same
+                ? null
+                : () => Navigator.pop<TranslationChoice>(
+                    context, (from: _from, to: _to)),
+            icon: const Icon(Icons.translate_rounded, size: 18),
+            label: Text(same ? l.composeTranslateSameLanguage : l.composeTranslate),
+          ),
         ],
       ),
     );
   }
+}
+
+class _LanguageField extends StatelessWidget {
+  const _LanguageField({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final TranslateLanguage value;
+  final void Function(TranslateLanguage) onChanged;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: const TextStyle(color: kTextMuted, fontSize: 11.5)),
+          const SizedBox(height: 5),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: kBackground,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: kBorder),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<TranslateLanguage>(
+                value: value,
+                isExpanded: true,
+                dropdownColor: kSurface,
+                style: const TextStyle(fontSize: 14.5, color: kText),
+                items: [
+                  for (final language in Translator.targets)
+                    DropdownMenuItem(
+                      value: language,
+                      child: Text(languageLabel(language)),
+                    ),
+                ],
+                onChanged: (v) {
+                  if (v != null) onChanged(v);
+                },
+              ),
+            ),
+          ),
+        ],
+      );
 }

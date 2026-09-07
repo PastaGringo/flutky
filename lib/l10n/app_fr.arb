@@ -309,5 +309,17 @@
     "placeholders": {
       "error": {}
     }
-  }
+  },
+  "tabDiscover": "Découverte",
+  "titleDiscover": "Découverte",
+  "discoverPopular": "Populaire",
+  "discoverPeople": "COMPTES À DÉCOUVRIR",
+  "discoverEmpty": "Rien à montrer pour l'instant. Tire vers le bas pour réessayer.",
+  "discoverEmptyTag": "Aucun post ne porte encore #{tag}.",
+  "composeTranslateFrom": "Depuis",
+  "composeTranslateDetected": "Détecté",
+  "composeTranslateTarget": "Vers",
+  "composeTranslateSameLanguage": "Choisis deux langues différentes",
+  "composeTranslateKeepsMentions": "Les mentions et les liens ne sont pas touchés — une clé traduite ne notifierait plus personne.",
+  "composeTranslateWorking": "Traduction en cours… la première fois vers une langue, un modèle est téléchargé d'abord."
 }

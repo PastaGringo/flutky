@@ -114,6 +114,50 @@ enum FeedSource {
   final String apiValue;
 }
 
+/// How `GET /v0/stream/posts` orders what it returns.
+///
+/// Measured against the live API: the two orderings share no post at all on
+/// the first page, which is what proves the parameter is honoured rather than
+/// ignored — an unknown value answers 400 rather than falling back.
+enum PostSorting {
+  timeline('timeline'),
+  totalEngagement('total_engagement');
+
+  const PostSorting(this.apiValue);
+  final String apiValue;
+}
+
+/// The two ways `GET /v0/stream/users` ranks accounts nobody follows yet.
+///
+/// They are genuinely distinct: measured on ten entries, the two lists differ
+/// in both order and membership. `followers`, `following`, `friends` and
+/// `recommended` also exist but all need an observer, so they belong to a
+/// profile screen rather than to public discovery.
+enum UserSource {
+  mostFollowed('most_followed'),
+  influencers('influencers');
+
+  const UserSource(this.apiValue);
+  final String apiValue;
+}
+
+/// A label and how many things carry it — one row of `GET /v0/tags/hot`.
+class HotTag {
+  const HotTag({required this.label, required this.taggedCount});
+
+  final String label;
+
+  /// The real total. Do not read `taggers_count` for this: the response caps
+  /// its list of taggers at twenty, so that field reads 20 for every popular
+  /// label and orders nothing.
+  final int taggedCount;
+
+  factory HotTag.fromJson(Map<String, dynamic> json) => HotTag(
+        label: (json['label'] ?? '').toString(),
+        taggedCount: (json['tagged_count'] as num?)?.toInt() ?? 0,
+      );
+}
+
 /// One entry of a stream. Mirrors `GET /v0/stream/posts`.
 class PubkyPost {
   const PubkyPost({
@@ -311,12 +355,19 @@ class NexusClient {
     /// silently ignored *without* it too, which is why the app never passes
     /// one unless the source calls for it.
     String? authorId,
+    /// Keeps only posts carrying this label. An unknown label answers an empty
+    /// list rather than the unfiltered timeline — checked, because a filter
+    /// that silently does nothing is worse than one that fails.
+    String? tag,
+    PostSorting sorting = PostSorting.timeline,
     int limit = 20,
     int skip = 0,
   }) async {
     final query = <String, String>{
       'source': source.apiValue,
       'author_id': ?authorId,
+      'tags': ?tag,
+      'sorting': sorting.apiValue,
       'limit': '${limit.clamp(1, 50)}',
       'skip': '$skip',
       'include_attachment_metadata': 'true',
@@ -405,6 +456,49 @@ class NexusClient {
     return decoded
         .whereType<Map<String, dynamic>>()
         .map(PubkyNotification.fromJson)
+        .toList();
+  }
+
+  /// The labels the network is using most right now.
+  ///
+  /// Needs no session and no observer: this is the one view that is the same
+  /// for everyone, which is what makes it a reasonable entry point for someone
+  /// who follows nobody yet.
+  Future<List<HotTag>> fetchHotTags({int limit = 20}) async {
+    final res = await _client
+        .get(Uri.parse('$nexusBase/v0/tags/hot?limit=$limit'))
+        .timeout(_timeout);
+    if (res.statusCode != 200) {
+      throw NexusError(res.statusCode, _shorten(res.body));
+    }
+    final decoded = jsonDecode(utf8.decode(res.bodyBytes));
+    if (decoded is! List) return const [];
+    return decoded
+        .whereType<Map<String, dynamic>>()
+        .map(HotTag.fromJson)
+        .where((t) => t.label.isNotEmpty)
+        .toList();
+  }
+
+  /// Accounts to discover. Unlike the post stream, this one carries whole
+  /// profiles already — no second call to resolve names.
+  Future<List<PubkyProfile>> fetchUserStream({
+    required UserSource source,
+    int limit = 12,
+  }) async {
+    final res = await _client
+        .get(Uri.parse('$nexusBase/v0/stream/users'
+            '?source=${source.apiValue}&limit=${limit.clamp(1, 50)}'))
+        .timeout(_timeout);
+    if (res.statusCode != 200) {
+      throw NexusError(res.statusCode, _shorten(res.body));
+    }
+    final decoded = jsonDecode(utf8.decode(res.bodyBytes));
+    if (decoded is! List) return const [];
+    return decoded
+        .whereType<Map<String, dynamic>>()
+        .map(PubkyProfile.fromJson)
+        .where((p) => p.id.isNotEmpty)
         .toList();
   }
 

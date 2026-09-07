@@ -28,10 +28,11 @@ and building for iOS needs macOS.
 | ✅ | French and English, switchable in-app |
 | ✅ | Long-form posts, whose content is JSON rather than text |
 | ✅ | Follow and unfollow from a profile |
-| ✅ | Mentioning people when composing, searched by display name |
+| ✅ | Mentioning people when composing — shown as `@Name`, not as fifty-seven characters |
 | ✅ | An "Ask Jeb" shortcut — mention the AI account and its reply lands in your feed |
 | ✅ | Optionally folding your own posts into the Following feed |
-| ✅ | Translating a draft before posting — on-device, no key, no account |
+| ✅ | **Discover**: what the network tags most, ranked by engagement, plus accounts to follow |
+| ✅ | Translating a draft before posting — on-device, no key, no account, mentions left intact |
 | ✅ | Built-in diagnostics for the authentication path |
 
 ### Not there yet
@@ -104,9 +105,10 @@ lib/
     nexus.dart                 indexer client and models
     homeserver.dart            writing
     diagnostics.dart           authentication probes
-  screens/                     connect, feed, notifications, profile,
-                               compose, diagnostics, settings
-test/                          67 tests, offline and against the live network
+    translation.dart           on-device translation, protecting mentions
+  screens/                     connect, feed, discover, notifications,
+                               profile, compose, diagnostics, settings
+test/                          82 tests, offline and against the live network
   fixtures/                    untouched Nexus responses
 ```
 
@@ -150,6 +152,14 @@ documentation:
 - A mention is the literal `pubky` followed by the 52-character key, with no
   separator — verified against the list Nexus itself publishes in
   `relationships.mentioned`.
+- Discovery rests on three parameters that are all checked to actually do
+  something: `sorting=total_engagement` returns a page sharing **no post at
+  all** with `timeline`; `tags=<label>` returns only posts carrying that
+  label, and an unknown label returns **nothing** rather than the unfiltered
+  stream; `most_followed` and `influencers` are genuinely different rankings.
+  A label over 20 characters is rejected outright, before any filtering.
+- `tags/hot` caps its list of taggers at twenty, so `taggers_count` reads 20
+  for every popular label. `tagged_count` is the number that orders anything.
 
 ## Licence
 

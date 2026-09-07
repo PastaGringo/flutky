@@ -27,8 +27,14 @@ class LinkSpan extends ContentSpan {
 
 /// `pubky` + 52 z-base-32 chars. The negative lookahead keeps `pubky://…`
 /// URIs out: those are resource links, not mentions.
-final _mention = RegExp(r'pubky(?!:\/\/)([a-z0-9]{52})');
-final _link = RegExp(r'https?:\/\/[^\s<>"]+');
+///
+/// Kept as source strings too, so they can be folded into a larger pattern —
+/// the compose sheet builds one that also covers the aliases on screen.
+const mentionPattern = r'pubky(?!:\/\/)([a-z0-9]{52})';
+const linkPattern = r'https?:\/\/[^\s<>"]+';
+
+final _mention = RegExp(mentionPattern);
+final _link = RegExp(linkPattern);
 
 /// Splits content in one pass, so a link inside a sentence and a mention next
 /// to it both survive. Order matters only for overlapping matches, which these
@@ -63,3 +69,25 @@ List<ContentSpan> parseContent(String content) {
 /// in the same batch call as the post authors.
 Set<String> mentionedKeys(String content) =>
     _mention.allMatches(content).map((m) => m.group(1)!).toSet();
+
+/// A stable, space-free `@Name` standing for a key in the editor.
+///
+/// Spaces are dropped rather than kept: an alias containing one is broken by
+/// any edit inside it, and the mention would then vanish without saying so. A
+/// name made only of emoji leaves nothing usable, hence the fallback to the
+/// head of the key. Two people sharing a name get a key suffix — the alias is
+/// what the substitution matches, so it has to be unique.
+String aliasForMention(
+  String pubky,
+  String name,
+  Map<String, String> existing,
+) {
+  var base = name.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '');
+  if (base.isEmpty) base = pubky.substring(0, 6);
+  if (base.length > 24) base = base.substring(0, 24);
+
+  final plain = '@$base';
+  final taken = existing[plain];
+  if (taken == null || taken == pubky) return plain;
+  return '@$base-${pubky.substring(0, 4)}';
+}

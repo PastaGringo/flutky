@@ -9,6 +9,7 @@ import '../settings/feed_preferences.dart';
 import '../settings/locale_controller.dart';
 import '../theme.dart';
 import 'diagnostics_screen.dart';
+import 'discover_screen.dart';
 import 'feed_screen.dart';
 import 'messages_screen.dart';
 import 'notifications_screen.dart';
@@ -74,6 +75,29 @@ class _HomeShellState extends State<HomeShell> {
   /// Opens the issue form with its template already selected. GitHub reads the
   /// `template` parameter, so the person lands on a filled form rather than on
   /// an empty box — which is what makes a report usable.
+  /// Notifications are a place you go to, not a place you live in — so they
+  /// are a route rather than a tab. Pushing one also drops the badge problem:
+  /// a tab you can see is a tab that has to say whether it has anything new.
+  void _openNotifications() {
+    final l = L10n.of(context);
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => Scaffold(
+          appBar: AppBar(
+            backgroundColor: kBackground,
+            title: Text(l.titleNotifications),
+          ),
+          body: SafeArea(
+            child: NotificationsScreen(
+              nexus: widget.nexus,
+              pubky: widget.session.pubky,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _openIssue(String template) => launchUrl(
         Uri.parse('$repositoryUrl/issues/new?template=$template'),
         mode: LaunchMode.externalApplication,
@@ -84,7 +108,7 @@ class _HomeShellState extends State<HomeShell> {
     final l = L10n.of(context);
     final titles = [
       l.titleFeed,
-      l.titleNotifications,
+      l.titleDiscover,
       l.titleMessages,
       l.titleProfile,
     ];
@@ -94,6 +118,11 @@ class _HomeShellState extends State<HomeShell> {
         backgroundColor: kBackground,
         title: Text(titles[_tab]),
         actions: [
+          IconButton(
+            onPressed: _openNotifications,
+            icon: const Icon(Icons.notifications_none_rounded),
+            tooltip: l.titleNotifications,
+          ),
           IconButton(
             onPressed: () => _openIssue('bug_report.yml'),
             icon: const Icon(Icons.bug_report_outlined),
@@ -155,9 +184,9 @@ class _HomeShellState extends State<HomeShell> {
               session: widget.session,
               preferences: widget.preferences,
             ),
-            NotificationsScreen(
+            DiscoverScreen(
               nexus: widget.nexus,
-              pubky: widget.session.pubky,
+              session: widget.session,
             ),
             const MessagesScreen(),
             ProfileScreen(
@@ -181,10 +210,9 @@ class _HomeShellState extends State<HomeShell> {
             label: l.tabFeed,
           ),
           NavigationDestination(
-            icon: const Icon(Icons.notifications_none_rounded),
-            selectedIcon:
-                const Icon(Icons.notifications_rounded, color: kAccent),
-            label: l.tabNotifications,
+            icon: const Icon(Icons.explore_outlined),
+            selectedIcon: const Icon(Icons.explore_rounded, color: kAccent),
+            label: l.tabDiscover,
           ),
           NavigationDestination(
             icon: const Icon(Icons.forum_outlined),

@@ -553,4 +553,45 @@ class L10nFr extends L10n {
 
   @override
   String get messagesWipFollow => 'Suivre l\'avancement';
+
+  @override
+  String get tabDiscover => 'Découverte';
+
+  @override
+  String get titleDiscover => 'Découverte';
+
+  @override
+  String get discoverPopular => 'Populaire';
+
+  @override
+  String get discoverPeople => 'COMPTES À DÉCOUVRIR';
+
+  @override
+  String get discoverEmpty =>
+      'Rien à montrer pour l\'instant. Tire vers le bas pour réessayer.';
+
+  @override
+  String discoverEmptyTag(String tag) {
+    return 'Aucun post ne porte encore #$tag.';
+  }
+
+  @override
+  String get composeTranslateFrom => 'Depuis';
+
+  @override
+  String get composeTranslateDetected => 'Détecté';
+
+  @override
+  String get composeTranslateTarget => 'Vers';
+
+  @override
+  String get composeTranslateSameLanguage => 'Choisis deux langues différentes';
+
+  @override
+  String get composeTranslateKeepsMentions =>
+      'Les mentions et les liens ne sont pas touchés — une clé traduite ne notifierait plus personne.';
+
+  @override
+  String get composeTranslateWorking =>
+      'Traduction en cours… la première fois vers une langue, un modèle est téléchargé d\'abord.';
 }

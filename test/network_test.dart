@@ -134,4 +134,98 @@ void main() {
       throwsA(isA<ProfileNotIndexed>()),
     );
   }, timeout: const Timeout(Duration(seconds: 60)));
+
+  group('public discovery', () {
+    test('the hot labels come back ordered by a count that varies', () async {
+      final tags = await nexus.fetchHotTags(limit: 12);
+      expect(tags, isNotEmpty);
+      expect(tags.first.label, isNotEmpty);
+
+      // Ordered, descending. And read from `tagged_count`, not from
+      // `taggers_count`: the response caps its list of taggers at twenty, so
+      // that field reads 20 for every popular label and would order nothing.
+      final counts = tags.map((t) => t.taggedCount).toList();
+      expect(counts.first, greaterThan(0));
+      expect(counts, orderedEquals(counts.toList()..sort((a, b) => b - a)));
+      expect(counts.toSet().length, greaterThan(1),
+          reason: 'des comptes tous identiques trahiraient le mauvais champ');
+      final resume =
+          tags.take(4).map((t) => '${t.label}=${t.taggedCount}').join(' · ');
+      // ignore: avoid_print
+      print('tags chauds : $resume');
+    }, timeout: const Timeout(Duration(seconds: 60)));
+
+    test('filtering by label really filters', () async {
+      const label = 'bitcoin';
+      final posts = await nexus.fetchStream(
+        source: FeedSource.all,
+        tag: label,
+        sorting: PostSorting.totalEngagement,
+        limit: 10,
+      );
+      expect(posts, isNotEmpty);
+      for (final post in posts) {
+        expect(post.tags.map((t) => t.label), contains(label),
+            reason: 'un post sans le libellé demandé prouve un filtre ignoré');
+      }
+    }, timeout: const Timeout(Duration(seconds: 60)));
+
+    test('an unknown label answers nothing, not the whole timeline', () async {
+      // The witness that matters: an ignored filter parameter would hand back
+      // the unfiltered stream, and a full page would read as a success.
+      //
+      // Kept under twenty characters on purpose: a longer label is rejected as
+      // invalid (400) before any filtering happens, which would prove nothing
+      // about whether the parameter is honoured.
+      final posts = await nexus.fetchStream(
+        source: FeedSource.all,
+        tag: 'zzznobodytagsthis',
+        limit: 10,
+      );
+      expect(posts, isEmpty);
+    }, timeout: const Timeout(Duration(seconds: 60)));
+
+    test('engagement and timeline are two different orderings', () async {
+      final byTime = await nexus.fetchStream(
+        source: FeedSource.all,
+        limit: 10,
+      );
+      final byEngagement = await nexus.fetchStream(
+        source: FeedSource.all,
+        sorting: PostSorting.totalEngagement,
+        limit: 10,
+      );
+      expect(byTime, isNotEmpty);
+      expect(byEngagement, isNotEmpty);
+
+      // Not merely a different order: a different set. The newest posts have
+      // had no time to gather engagement, so the two pages should not even
+      // overlap much — identical sets would mean the parameter did nothing.
+      final a = byTime.map((p) => p.id).toSet();
+      final b = byEngagement.map((p) => p.id).toSet();
+      expect(a, isNot(equals(b)));
+      // ignore: avoid_print
+      print('recoupement des deux tris : ${a.intersection(b).length}/10');
+    }, timeout: const Timeout(Duration(seconds: 60)));
+
+    test('the two account rankings are distinct, and carry whole profiles',
+        () async {
+      final followed =
+          await nexus.fetchUserStream(source: UserSource.mostFollowed);
+      final influencers =
+          await nexus.fetchUserStream(source: UserSource.influencers);
+
+      expect(followed, isNotEmpty);
+      expect(influencers, isNotEmpty);
+      // A stream of posts carries author keys only; this one carries profiles,
+      // which is what lets the strip paint without a second call.
+      expect(followed.first.name, isNotEmpty);
+      expect(followed.first.id.length, 52);
+      expect(
+        followed.map((p) => p.id).toList(),
+        isNot(equals(influencers.map((p) => p.id).toList())),
+        reason: 'deux classements identiques trahiraient un paramètre ignoré',
+      );
+    }, timeout: const Timeout(Duration(seconds: 60)));
+  });
 }

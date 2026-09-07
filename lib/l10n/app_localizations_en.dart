@@ -553,4 +553,45 @@ class L10nEn extends L10n {
 
   @override
   String get messagesWipFollow => 'Follow the work';
+
+  @override
+  String get tabDiscover => 'Discover';
+
+  @override
+  String get titleDiscover => 'Discover';
+
+  @override
+  String get discoverPopular => 'Popular';
+
+  @override
+  String get discoverPeople => 'PEOPLE TO DISCOVER';
+
+  @override
+  String get discoverEmpty =>
+      'Nothing to show right now. Pull down to try again.';
+
+  @override
+  String discoverEmptyTag(String tag) {
+    return 'Nothing carries #$tag yet.';
+  }
+
+  @override
+  String get composeTranslateFrom => 'From';
+
+  @override
+  String get composeTranslateDetected => 'Detected';
+
+  @override
+  String get composeTranslateTarget => 'To';
+
+  @override
+  String get composeTranslateSameLanguage => 'Pick two different languages';
+
+  @override
+  String get composeTranslateKeepsMentions =>
+      'Mentions and links are left untouched — a translated key would no longer notify anyone.';
+
+  @override
+  String get composeTranslateWorking =>
+      'Translating… the first time into a language, a model is downloaded first.';
 }

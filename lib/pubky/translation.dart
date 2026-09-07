@@ -11,6 +11,42 @@ import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 /// The source language is detected rather than asked for: a person writing a
 /// post already knows what language they are writing in, and making them say
 /// so is a question with an obvious answer.
+/// The two languages a translation runs between, once settled.
+typedef TranslationChoice = ({TranslateLanguage from, TranslateLanguage to});
+
+/// A stretch of text, and whether a translator may touch it.
+class TextRun {
+  const TextRun(this.text, {required this.translatable});
+  final String text;
+  final bool translatable;
+}
+
+/// Cuts [text] around the fragments [protect] matches, so they can be put back
+/// byte for byte after a translation.
+///
+/// A mention is `pubky` followed by 52 characters, and an @Name in the editor
+/// stands for one. A translator mangles both: it lowercases, inserts spaces,
+/// or translates the name itself — and a mention whose key changed by one
+/// character is no longer a mention, so the person is simply never notified.
+/// The failure is silent, which is exactly why this exists.
+List<TextRun> protectRuns(String text, RegExp protect) {
+  if (text.isEmpty) return const [];
+  final runs = <TextRun>[];
+  var cursor = 0;
+  for (final m in protect.allMatches(text)) {
+    if (m.start < cursor) continue;
+    if (m.start > cursor) {
+      runs.add(TextRun(text.substring(cursor, m.start), translatable: true));
+    }
+    runs.add(TextRun(m.group(0)!, translatable: false));
+    cursor = m.end;
+  }
+  if (cursor < text.length) {
+    runs.add(TextRun(text.substring(cursor), translatable: true));
+  }
+  return runs;
+}
+
 class Translator {
   Translator({LanguageIdentifier? identifier})
       : _identifier = identifier ??
@@ -65,6 +101,48 @@ class Translator {
       // lifetime of the process.
       await translator.close();
     }
+  }
+
+  /// Translates everything except what [protect] matches.
+  ///
+  /// Each translatable run goes through separately and is put back in place,
+  /// so the protected fragments keep their exact position — not merely their
+  /// presence. Splitting a sentence around a mention costs a little fluency;
+  /// letting the translator rewrite a key costs the mention itself.
+  Future<String> translateProtecting(
+    String text, {
+    required TranslateLanguage from,
+    required TranslateLanguage to,
+    required RegExp protect,
+  }) async {
+    if (from == to) return text;
+    final runs = protectRuns(text, protect);
+    if (runs.every((r) => !r.translatable)) return text;
+
+    final out = StringBuffer();
+    final translator =
+        OnDeviceTranslator(sourceLanguage: from, targetLanguage: to);
+    try {
+      for (final run in runs) {
+        if (!run.translatable || run.text.trim().isEmpty) {
+          out.write(run.text);
+          continue;
+        }
+        // Leading and trailing spaces are kept out of the call: some engines
+        // drop them, which would weld a mention onto the previous word and
+        // break the very match this protects.
+        final lead = RegExp(r'^\s*').firstMatch(run.text)!.group(0)!;
+        final tail = RegExp(r'\s*$').firstMatch(run.text)!.group(0)!;
+        final body = run.text.substring(lead.length, run.text.length - tail.length);
+        out
+          ..write(lead)
+          ..write(await translator.translateText(body))
+          ..write(tail);
+      }
+    } finally {
+      await translator.close();
+    }
+    return out.toString();
   }
 
   Future<void> close() => _identifier.close();

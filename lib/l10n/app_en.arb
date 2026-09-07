@@ -309,5 +309,24 @@
     "placeholders": {
       "error": {}
     }
-  }
+  },
+  "tabDiscover": "Discover",
+  "titleDiscover": "Discover",
+  "discoverPopular": "Popular",
+  "discoverPeople": "PEOPLE TO DISCOVER",
+  "discoverEmpty": "Nothing to show right now. Pull down to try again.",
+  "discoverEmptyTag": "Nothing carries #{tag} yet.",
+  "composeTranslateFrom": "From",
+  "composeTranslateDetected": "Detected",
+  "composeTranslateTarget": "To",
+  "composeTranslateSameLanguage": "Pick two different languages",
+  "composeTranslateKeepsMentions": "Mentions and links are left untouched — a translated key would no longer notify anyone.",
+  "@discoverEmptyTag": {
+    "placeholders": {
+      "tag": {
+        "type": "String"
+      }
+    }
+  },
+  "composeTranslateWorking": "Translating… the first time into a language, a model is downloaded first."
 }
