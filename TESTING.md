@@ -2,6 +2,47 @@
 
 ## À tester (récents en haut)
 
+### feat: répondre, traduire les posts des autres, image en grand — v0.15.0 — 2026-09-08
+
+- [ ] **Où** : écran d'un post, bouton *Répondre* en bas
+  - **Étape** : écrire une réponse et l'envoyer
+  - **Attendu** : elle apparaît dans la liste au bout de quelques secondes, et
+    aussi sur pubky.app sous le post d'origine.
+
+- [ ] **Où** : une réponse qui porte elle-même un compteur de réponses
+  - **Étape** : la toucher
+  - **Attendu** : son propre fil s'ouvre, avec le post parent au-dessus sous
+    « EN RÉPONSE À ». Nexus ne rend que les enfants **directs** : c'est
+    normal de descendre écran par écran.
+
+- [ ] **Où** : n'importe quelle carte, icône de traduction à droite des
+    compteurs
+  - **Étape** : toucher un post en anglais
+  - **Attendu** : le texte passe en français, une ligne le signale, et
+    l'icône devient une flèche de retour. Les mentions et liens sont
+    intacts. Sans clé DeepL, un message dit où en ajouter une.
+
+- [ ] **Où** : un post avec image
+  - **Étape** : toucher l'image
+  - **Attendu** : plein écran, zoomable au pincement, croix pour fermer.
+    L'image chargée est la variante `main`, pas la vignette.
+
+- [ ] **Où** : fenêtre d'écriture
+  - **Étape** : compter les boutons d'action
+  - **Attendu** : **cinq** sont visibles (Mentionner, Jeb, Image, Traduire,
+    et Annuler après une traduction), sur deux lignes si besoin. Avant, la
+    rangée débordait et Traduire était hors écran.
+
+- [ ] **Où** : flux, bouton *Demander à Jeb* au-dessus du bouton d'écriture
+  - **Étape** : le toucher
+  - **Attendu** : le champ affiche **`@Jeb`**, pas la clé. Ce raccourci
+    passait à côté du mécanisme d'alias.
+
+- [ ] **Où** : un fil de discussion
+  - **Étape** : regarder sous chaque réponse
+  - **Attendu** : plus d'encart « post d'origine indisponible » — le post
+    parent est déjà affiché au-dessus.
+
 ### feat: images dans un post, fil de discussion, pastille — v0.14.0 — 2026-09-08
 
 - [ ] **Où** : fenêtre d'écriture, bouton *Image*

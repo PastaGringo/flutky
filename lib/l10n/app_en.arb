@@ -363,5 +363,12 @@
   },
   "composeImage": "Picture",
   "composeImageRemove": "Remove the picture",
-  "composeUploading": "Sending the picture…"
+  "composeUploading": "Sending the picture…",
+  "composeReplyTitle": "Reply",
+  "composeReplyHint": "Your reply…",
+  "composeReplyPublish": "Reply",
+  "postReply": "Reply",
+  "actionClose": "Close",
+  "postTranslate": "Translate this post",
+  "postTranslatedBy": "Translated by DeepL — tap the arrow for the original"
 }

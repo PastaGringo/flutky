@@ -661,4 +661,26 @@ class L10nEn extends L10n {
 
   @override
   String get composeUploading => 'Sending the picture…';
+
+  @override
+  String get composeReplyTitle => 'Reply';
+
+  @override
+  String get composeReplyHint => 'Your reply…';
+
+  @override
+  String get composeReplyPublish => 'Reply';
+
+  @override
+  String get postReply => 'Reply';
+
+  @override
+  String get actionClose => 'Close';
+
+  @override
+  String get postTranslate => 'Translate this post';
+
+  @override
+  String get postTranslatedBy =>
+      'Translated by DeepL — tap the arrow for the original';
 }

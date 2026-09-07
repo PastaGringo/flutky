@@ -155,6 +155,7 @@ class HomeserverClient {
   Future<String> createShortPost(
     String content, {
     List<String> attachments = const [],
+    String? parent,
   }) async {
     final trimmed = content.trim();
     // A picture is content: only a post with neither text nor attachment is
@@ -181,6 +182,11 @@ class HomeserverClient {
             'content': trimmed,
             'kind': attachments.isEmpty ? 'short' : 'image',
             if (attachments.isNotEmpty) 'attachments': attachments,
+            // A reply needs no computed id and no separate resource: it is an
+            // ordinary post carrying the URI it answers. Measured on a real
+            // one rather than assumed — I had spent weeks believing replies
+            // were blocked on a hash they never needed.
+            'parent': ?parent,
           })),
         )
         .timeout(_timeout);

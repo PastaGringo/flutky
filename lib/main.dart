@@ -12,6 +12,7 @@ import 'screens/connect_screen.dart';
 import 'screens/home_shell.dart';
 import 'settings/feed_preferences.dart';
 import 'settings/locale_controller.dart';
+import 'settings/preferences_scope.dart';
 import 'theme.dart';
 
 /// An error, kept as a function of the translations rather than as finished
@@ -48,7 +49,10 @@ class FlutkyApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          home: SessionGate(locales: locales, preferences: preferences),
+          home: PreferencesScope(
+            preferences: preferences,
+            child: SessionGate(locales: locales, preferences: preferences),
+          ),
         ),
       );
 }

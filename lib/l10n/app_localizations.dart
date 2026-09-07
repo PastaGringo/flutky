@@ -1218,6 +1218,48 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Sending the picture…'**
   String get composeUploading;
+
+  /// No description provided for @composeReplyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply'**
+  String get composeReplyTitle;
+
+  /// No description provided for @composeReplyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your reply…'**
+  String get composeReplyHint;
+
+  /// No description provided for @composeReplyPublish.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply'**
+  String get composeReplyPublish;
+
+  /// No description provided for @postReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply'**
+  String get postReply;
+
+  /// No description provided for @actionClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get actionClose;
+
+  /// No description provided for @postTranslate.
+  ///
+  /// In en, this message translates to:
+  /// **'Translate this post'**
+  String get postTranslate;
+
+  /// No description provided for @postTranslatedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Translated by DeepL — tap the arrow for the original'**
+  String get postTranslatedBy;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

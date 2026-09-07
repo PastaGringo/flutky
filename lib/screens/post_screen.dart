@@ -7,6 +7,8 @@ import '../pubky/mentions.dart';
 import '../pubky/nexus.dart';
 import '../pubky/ring_session.dart';
 import '../theme.dart';
+import '../settings/preferences_scope.dart';
+import 'compose_sheet.dart';
 import 'post_card.dart';
 import 'profile_sheet.dart';
 
@@ -144,6 +146,34 @@ class _PostScreenState extends State<PostScreen> {
     }
   }
 
+  /// Replies to the post on screen.
+  ///
+  /// A reply is an ordinary post carrying the URI it answers — no computed id,
+  /// no separate resource. The list is reloaded afterwards rather than shown
+  /// optimistically: the thread is small, and a wrong guess about ordering
+  /// would be more confusing than a second of waiting.
+  Future<void> _reply(PubkyPost post) async {
+    final published = await showComposeSheet(
+      context,
+      session: widget.session,
+      nexus: widget.nexus,
+      uiLanguage: Localizations.localeOf(context).languageCode,
+      deepLKey: PreferencesScope.maybeOf(context)?.deepLKey ?? '',
+      parent: 'pubky://${post.author}/pub/pubky.app/posts/${post.id}',
+    );
+    if (published == null || !mounted) return;
+
+    unawaited(widget.nexus.requestIngest(widget.session.pubky));
+    // The indexer lags the homeserver by a second or two, so the first look
+    // usually comes back without the reply. Two tries cover it without
+    // turning the screen into a poller.
+    await Future<void>.delayed(const Duration(seconds: 3));
+    await _load();
+    if (!mounted) return;
+    await Future<void>.delayed(const Duration(seconds: 5));
+    if (mounted) await _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = L10n.of(context);
@@ -154,11 +184,20 @@ class _PostScreenState extends State<PostScreen> {
         backgroundColor: kBackground,
         title: Text(l.postTitle),
       ),
+      floatingActionButton: post == null
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => _reply(post),
+              backgroundColor: kAccent,
+              foregroundColor: const Color(0xFF04120E),
+              icon: const Icon(Icons.reply_rounded, size: 19),
+              label: Text(l.postReply),
+            ),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _load,
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
             children: [
               if (_error != null) ...[
                 ErrorPanel(message: _error!),
@@ -185,6 +224,18 @@ class _PostScreenState extends State<PostScreen> {
                     nexus: widget.nexus,
                     profiles: _profiles,
                     session: widget.session,
+                    hideQuote: true,
+                    onOpen: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => PostScreen(
+                          nexus: widget.nexus,
+                          session: widget.session,
+                          author: parent.author,
+                          postId: parent.id,
+                          known: parent,
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 14),
                 ],
@@ -223,6 +274,28 @@ class _PostScreenState extends State<PostScreen> {
                       nexus: widget.nexus,
                       profiles: _profiles,
                       session: widget.session,
+                      // Every reply here answers the post above: framing it
+                      // again under each one would repeat the screen.
+                      hideQuote: true,
+                      // A thread is a tree, and Nexus hands back one level at
+                      // a time: `post_replies` returns direct children only,
+                      // and `counts.replies` counts only those. Measured on a
+                      // post announcing 16 replies — all 16 came back, all
+                      // pointing at the root, while five of them had a reply
+                      // of their own that did not. So each reply opens its
+                      // own screen, and its counter says whether that is
+                      // worth doing.
+                      onOpen: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => PostScreen(
+                            nexus: widget.nexus,
+                            session: widget.session,
+                            author: reply.author,
+                            postId: reply.id,
+                            known: reply,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
               ],

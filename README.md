@@ -34,7 +34,9 @@ and building for iOS needs macOS.
 | ✅ | **Discover**: what the network tags most, ranked by engagement, plus accounts to follow |
 | ✅ | Translating a draft before posting, with your own DeepL key — mentions and links left intact |
 | ✅ | **Attaching a picture** to a post — BLAKE3 blob id computed in Dart |
-| ✅ | Opening a post: its labels in full, and its replies |
+| ✅ | Opening a post: its labels in full, its replies, and **replying** |
+| ✅ | Translating **any** post, not only your own draft |
+| ✅ | Tapping a picture to see it full screen, zoomable |
 | ✅ | An unread count on the notifications icon |
 | ✅ | Built-in diagnostics for the authentication path |
 
@@ -42,7 +44,7 @@ and building for iOS needs macOS.
 
 | | |
 |---|---|
-| ❌ | Tagging, bookmarking, replying — the ids are within reach now that BLAKE3 is in Dart |
+| ❌ | Tagging and bookmarking — within reach now that BLAKE3 is in Dart |
 | ❌ | Deleting or editing your own posts |
 | ❌ | Search |
 | ❌ | Push notifications (the tab polls; there is no background delivery) |
@@ -126,6 +128,19 @@ only with itself is a hash nobody else can read:
 Note for anyone reading the Rust: `blob.rs` comments say "Z-base32 alphabet"
 while the line beneath calls `Alphabet::Crockford`. The code is what the
 network agrees on, and an upper-case real id settles it.
+
+## A thread is a tree, one level at a time
+
+A reply needs no hash at all — it is an ordinary post carrying a `parent`
+URI, with the same timestamp id as any other. This README said the opposite
+for several versions, lumping replies in with tags as "blocked on BLAKE3".
+They never were.
+
+Measured on a post announcing sixteen replies: `source=post_replies` returned
+exactly those sixteen, all pointing at the root — while five of them had a
+reply of their own that did not come back. So `counts.replies` and
+`post_replies` are about **direct children**, not a subtree, and the app walks
+down one screen at a time.
 
 ## Three traps this codebase documents
 

@@ -35,6 +35,14 @@ Future<PublishedPost?> showComposeSheet(
   required String uiLanguage,
   String deepLKey = '',
   String initialContent = '',
+  /// A mention to insert on opening, as `(key, name)`.
+  ///
+  /// Not folded into [initialContent]: that one is raw text, and a mention
+  /// pasted as raw text shows its 52 characters instead of `@Name`. The
+  /// shortcut from the feed did exactly that for a version.
+  ({String pubky, String name})? initialMention,
+  /// The `pubky://` URI this post answers, when it is a reply.
+  String? parent,
 }) =>
     showModalBottomSheet<PublishedPost>(
       context: context,
@@ -50,6 +58,8 @@ Future<PublishedPost?> showComposeSheet(
         uiLanguage: uiLanguage,
         deepLKey: deepLKey,
         initialContent: initialContent,
+        initialMention: initialMention,
+        parent: parent,
       ),
     );
 
@@ -60,6 +70,8 @@ class _ComposeSheet extends StatefulWidget {
     required this.uiLanguage,
     required this.deepLKey,
     required this.initialContent,
+    required this.initialMention,
+    required this.parent,
   });
 
   final RingSession session;
@@ -67,6 +79,8 @@ class _ComposeSheet extends StatefulWidget {
   final String uiLanguage;
   final String deepLKey;
   final String initialContent;
+  final ({String pubky, String name})? initialMention;
+  final String? parent;
 
   @override
   State<_ComposeSheet> createState() => _ComposeSheetState();
@@ -206,6 +220,10 @@ class _ComposeSheetState extends State<_ComposeSheet> {
   void initState() {
     super.initState();
     _checkAccess();
+    final mention = widget.initialMention;
+    if (mention != null) {
+      _insertMention(mention.pubky, mention.name);
+    }
   }
 
   Future<void> _checkAccess() async {
@@ -341,7 +359,11 @@ class _ComposeSheetState extends State<_ComposeSheet> {
       }
       if (mounted) setState(() => _uploadProgress = 1);
 
-      final id = await client.createShortPost(content, attachments: attachments);
+      final id = await client.createShortPost(
+        content,
+        attachments: attachments,
+        parent: widget.parent,
+      );
 
       // The 201 alone is not proof: read it back from the homeserver, which
       // is the only source that answers immediately after a write.
@@ -388,7 +410,7 @@ class _ComposeSheetState extends State<_ComposeSheet> {
           Row(
             children: [
               Text(
-                l.composeTitle,
+                widget.parent == null ? l.composeTitle : l.composeReplyTitle,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 17),
               ),
               const Spacer(),
@@ -405,65 +427,42 @@ class _ComposeSheetState extends State<_ComposeSheet> {
             ErrorPanel(message: _accessError!),
           ],
           const SizedBox(height: 12),
-          Row(
+          // A Wrap, not a Row: five actions do not fit across a phone, and a
+          // Row silently pushes the last one off the edge rather than saying
+          // so. The translate button spent a version invisible that way.
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
               _ComposeAction(
                 icon: Icons.alternate_email_rounded,
                 label: l.composeMention,
                 onTap: _sending ? null : _pickMention,
               ),
-              const SizedBox(width: 8),
               _ComposeAction(
                 icon: Icons.smart_toy_outlined,
                 label: l.composeAskJeb,
                 onTap:
                     _sending ? null : () => _insertMention(jebPubky, 'Jeb'),
               ),
-              const SizedBox(width: 8),
               _ComposeAction(
                 icon: Icons.image_outlined,
                 label: l.composeImage,
                 onTap: (_sending || _imageBytes != null) ? null : _pickImage,
               ),
-              const SizedBox(width: 8),
               _ComposeAction(
                 icon: Icons.translate_rounded,
                 label: _translating ? l.composeTranslating : l.composeTranslate,
                 onTap: (_sending || _translating) ? null : _translate,
               ),
-              if (_beforeTranslation != null) ...[
-                const SizedBox(width: 8),
+              if (_beforeTranslation != null)
                 _ComposeAction(
                   icon: Icons.undo_rounded,
                   label: l.composeTranslateUndo,
                   onTap: _sending ? null : _undoTranslation,
                 ),
-              ],
             ],
           ),
-          if (_translating) ...[
-            const SizedBox(height: 10),
-            // The first translation into a language downloads a model, which
-            // takes seconds with nothing to look at. A chip label changing to
-            // "Translating…" is too quiet to read as "something is happening".
-            Row(
-              children: [
-                const SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    l.composeTranslateWorking,
-                    style: const TextStyle(
-                        color: kTextMuted, fontSize: 12.5, height: 1.4),
-                  ),
-                ),
-              ],
-            ),
-          ],
           if (_imageBytes case final bytes?) ...[
             const SizedBox(height: 12),
             _ImagePreview(
@@ -497,7 +496,8 @@ class _ComposeSheetState extends State<_ComposeSheet> {
             onChanged: (_) => setState(() {}),
             style: const TextStyle(fontSize: 15.5, height: 1.5),
             decoration: InputDecoration(
-              hintText: l.composeHint,
+              hintText:
+                  widget.parent == null ? l.composeHint : l.composeReplyHint,
               hintStyle: const TextStyle(color: kTextMuted),
               filled: true,
               fillColor: kBackground,
@@ -548,7 +548,9 @@ class _ComposeSheetState extends State<_ComposeSheet> {
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : Text(l.composePublish),
+                : Text(widget.parent == null
+                    ? l.composePublish
+                    : l.composeReplyPublish),
           ),
           const SizedBox(height: 10),
           Text(

@@ -218,7 +218,10 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
-  Future<void> _compose({String initialContent = ''}) async {
+  Future<void> _compose({
+    String initialContent = '',
+    ({String pubky, String name})? initialMention,
+  }) async {
     final published = await showComposeSheet(
       context,
       session: widget.session,
@@ -228,6 +231,7 @@ class _FeedScreenState extends State<FeedScreen> {
       uiLanguage: Localizations.localeOf(context).languageCode,
       deepLKey: widget.preferences.deepLKey,
       initialContent: initialContent,
+      initialMention: initialMention,
     );
     if (published == null || !mounted) return;
 
@@ -306,7 +310,9 @@ class _FeedScreenState extends State<FeedScreen> {
           // pre-fills the mention, the rest of the flow is unchanged.
           FloatingActionButton.extended(
             heroTag: 'askJeb',
-            onPressed: () => _compose(initialContent: 'pubky$jebPubky '),
+            onPressed: () => _compose(
+              initialMention: (pubky: jebPubky, name: 'Jeb'),
+            ),
             backgroundColor: kSurface,
             foregroundColor: kAccent,
             icon: const Icon(Icons.smart_toy_outlined, size: 19),

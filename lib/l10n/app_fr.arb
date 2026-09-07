@@ -339,5 +339,12 @@
   "postReplies": "{count, plural, =1{1 RÉPONSE} other{{count} RÉPONSES}}",
   "composeImage": "Image",
   "composeImageRemove": "Retirer l'image",
-  "composeUploading": "Envoi de l'image…"
+  "composeUploading": "Envoi de l'image…",
+  "composeReplyTitle": "Répondre",
+  "composeReplyHint": "Ta réponse…",
+  "composeReplyPublish": "Répondre",
+  "postReply": "Répondre",
+  "actionClose": "Fermer",
+  "postTranslate": "Traduire ce post",
+  "postTranslatedBy": "Traduit par DeepL — touche la flèche pour l'original"
 }

@@ -4,6 +4,10 @@ import '../l10n/app_localizations.dart';
 import '../pubky/nexus.dart';
 import '../pubky/ring_session.dart';
 import '../theme.dart';
+import '../pubky/mentions.dart';
+import '../pubky/translation.dart';
+import '../settings/preferences_scope.dart';
+import 'image_viewer.dart';
 import 'post_content.dart';
 import 'profile_sheet.dart';
 
@@ -13,7 +17,7 @@ import 'profile_sheet.dart';
 /// reads as a quote — the quoted post goes in a framed block underneath; with
 /// no text, it is a plain share and the original takes the whole card, under a
 /// discreet "reposted" line.
-class PostCard extends StatelessWidget {
+class PostCard extends StatefulWidget {
   const PostCard({
     super.key,
     required this.post,
@@ -24,6 +28,7 @@ class PostCard extends StatelessWidget {
     this.quotedAuthor,
     this.pending = false,
     this.onOpen,
+    this.hideQuote = false,
   });
 
   final PubkyPost post;
@@ -44,11 +49,112 @@ class PostCard extends StatelessWidget {
   /// to reach the screen you are already on is a dead end.
   final VoidCallback? onOpen;
 
+  /// Hides the quoted block entirely.
+  ///
+  /// Inside a thread, every reply points at the post displayed above it. The
+  /// block would either repeat that post under each answer, or — when it is
+  /// not passed in — claim the original is unavailable, which is false and
+  /// alarming. The context is already on screen; the frame is noise.
+  final bool hideQuote;
+
+  @override
+  State<PostCard> createState() => _PostCardState();
+
+  /// Falls back to a shortened key rather than showing 52 characters, and to a
+  /// translated placeholder when even that is missing.
+  static String displayName(PubkyProfile? profile, String key, L10n l) {
+    final name = profile?.name;
+    if (name != null && name.isNotEmpty) return name;
+    if (key.length <= 12) return key.isEmpty ? l.profileNoName : key;
+    return '${key.substring(0, 6)}…${key.substring(key.length - 4)}';
+  }
+
+  static String relativeTime(L10n l, DateTime? d) {
+    if (d == null) return '';
+    final diff = DateTime.now().difference(d);
+    if (diff.inMinutes < 1) return l.timeJustNow;
+    if (diff.inMinutes < 60) return l.timeMinutes(diff.inMinutes);
+    if (diff.inHours < 24) return l.timeHours(diff.inHours);
+    if (diff.inDays < 30) return l.timeDays(diff.inDays);
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(d.day)}/${two(d.month)}/${d.year}';
+  }
+
+}
+
+class _PostCardState extends State<PostCard> {
+  /// The translated text, once it exists. Kept beside the original rather than
+  /// replacing it: a translation is a reading aid, and the words the author
+  /// actually wrote must stay one tap away.
+  String? _translated;
+  bool _translating = false;
+
+  PubkyPost get post => widget.post;
+
+  Future<void> _translate() async {
+    final l = L10n.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    if (_translated != null) {
+      setState(() => _translated = null);
+      return;
+    }
+
+    final key = PreferencesScope.maybeOf(context)?.deepLKey ?? '';
+    if (key.isEmpty) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l.composeTranslateNoKey)),
+      );
+      return;
+    }
+
+    setState(() => _translating = true);
+    final translator = Translator(deepLKey: key);
+    try {
+      final out = await translator.translateProtecting(
+        post.content,
+        // Detected server-side: reading someone else's post, you do not know
+        // what language it is in — that is the whole reason for the button.
+        from: autoDetect,
+        to: Localizations.localeOf(context).languageCode,
+        protect: RegExp('$mentionPattern|$linkPattern'),
+      );
+      if (mounted) setState(() => _translated = out);
+    } on TranslationRefused catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(SnackBar(
+          content: Text(e.badKey
+              ? l.composeTranslateBadKey
+              : e.quotaExhausted
+                  ? l.composeTranslateQuota
+                  : l.composeTranslateFailed(e.message)),
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l.composeTranslateFailed('$e'))),
+        );
+      }
+    } finally {
+      translator.close();
+      if (mounted) setState(() => _translating = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = L10n.of(context);
+    final profiles = widget.profiles;
+    final pending = widget.pending;
+    final onOpen = widget.onOpen;
+    final hideQuote = widget.hideQuote;
+    final nexus = widget.nexus;
+    final session = widget.session;
+    final quoted = widget.quoted;
+    final quotedAuthor = widget.quotedAuthor;
     final author = profiles[post.author];
-    final name = displayName(author, post.author, l);
+    final name = PostCard.displayName(author, post.author, l);
 
     final card = Panel(
       padding: const EdgeInsets.all(16),
@@ -87,10 +193,21 @@ class PostCard extends StatelessWidget {
           ] else if (post.content.isNotEmpty) ...[
             const SizedBox(height: 12),
             PostContent(
-              content: post.content,
+              // The translation replaces the text in place, and the button
+              // below puts the original back. Mentions and links survive it:
+              // they are cut out before the request and slotted back after.
+              content: _translated ?? post.content,
               nexus: nexus,
               knownProfiles: profiles,
             ),
+            if (_translated != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  l.postTranslatedBy,
+                  style: const TextStyle(color: kTextMuted, fontSize: 11.5),
+                ),
+              ),
           ],
           // Not while pending: the indexer serves the variants, and it has
           // not seen the file yet — the card would flash a broken image for
@@ -99,7 +216,7 @@ class PostCard extends StatelessWidget {
             const SizedBox(height: 12),
             _Images(urls: post.imageUrls()),
           ],
-          if (post.isRepost || post.isReply) ...[
+          if (!hideQuote && (post.isRepost || post.isReply)) ...[
             const SizedBox(height: 12),
             _QuotedBlock(
               post: quoted,
@@ -108,7 +225,15 @@ class PostCard extends StatelessWidget {
               profiles: profiles,
             ),
           ],
-          _Metrics(post: post),
+          _Metrics(
+            post: post,
+            // Nothing to translate in a post with no words, and nothing to
+            // translate in one this device has not indexed yet.
+            onTranslate:
+                (post.content.isEmpty || pending) ? null : _translate,
+            translating: _translating,
+            translated: _translated != null,
+          ),
         ],
       ),
     );
@@ -124,25 +249,6 @@ class PostCard extends StatelessWidget {
     );
   }
 
-  /// Falls back to a shortened key rather than showing 52 characters, and to a
-  /// translated placeholder when even that is missing.
-  static String displayName(PubkyProfile? profile, String key, L10n l) {
-    final name = profile?.name;
-    if (name != null && name.isNotEmpty) return name;
-    if (key.length <= 12) return key.isEmpty ? l.profileNoName : key;
-    return '${key.substring(0, 6)}…${key.substring(key.length - 4)}';
-  }
-
-  static String relativeTime(L10n l, DateTime? d) {
-    if (d == null) return '';
-    final diff = DateTime.now().difference(d);
-    if (diff.inMinutes < 1) return l.timeJustNow;
-    if (diff.inMinutes < 60) return l.timeMinutes(diff.inMinutes);
-    if (diff.inHours < 24) return l.timeHours(diff.inHours);
-    if (diff.inDays < 30) return l.timeDays(diff.inDays);
-    String two(int n) => n.toString().padLeft(2, '0');
-    return '${two(d.day)}/${two(d.month)}/${d.year}';
-  }
 }
 
 class _Header extends StatelessWidget {
@@ -342,7 +448,10 @@ class _Images extends StatelessWidget {
   Widget build(BuildContext context) => ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: urls.length == 1
-            ? _Thumb(url: urls.first, height: height)
+            ? GestureDetector(
+                onTap: () => showImageViewer(context, urls: urls),
+                child: _Thumb(url: urls.first, height: height),
+              )
             : SizedBox(
                 height: height * 0.7,
                 child: ListView.separated(
@@ -353,7 +462,11 @@ class _Images extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                     child: SizedBox(
                       width: 170,
-                      child: _Thumb(url: urls[i], height: height * 0.7),
+                      child: GestureDetector(
+                        onTap: () =>
+                            showImageViewer(context, urls: urls, initial: i),
+                        child: _Thumb(url: urls[i], height: height * 0.7),
+                      ),
                     ),
                   ),
                 ),
@@ -395,16 +508,27 @@ class _Thumb extends StatelessWidget {
 }
 
 class _Metrics extends StatelessWidget {
-  const _Metrics({required this.post});
+  const _Metrics({
+    required this.post,
+    required this.onTranslate,
+    required this.translating,
+    required this.translated,
+  });
 
   final PubkyPost post;
+  final VoidCallback? onTranslate;
+  final bool translating;
+  final bool translated;
 
   @override
   Widget build(BuildContext context) {
+    final l = L10n.of(context);
     final replies = post.counts['replies'] ?? 0;
     final reposts = post.counts['reposts'] ?? 0;
     final tags = post.counts['tags'] ?? 0;
-    if (replies + reposts + tags == 0) return const SizedBox.shrink();
+    if (replies + reposts + tags == 0 && onTranslate == null) {
+      return const SizedBox.shrink();
+    }
 
     return Padding(
       padding: const EdgeInsets.only(top: 12),
@@ -413,6 +537,34 @@ class _Metrics extends StatelessWidget {
           if (replies > 0) _Metric(Icons.mode_comment_outlined, replies),
           if (reposts > 0) _Metric(Icons.repeat_rounded, reposts),
           if (tags > 0) _Metric(Icons.sell_outlined, tags),
+          const Spacer(),
+          if (onTranslate != null)
+            InkWell(
+              onTap: translating ? null : onTranslate,
+              borderRadius: BorderRadius.circular(999),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: translating
+                    ? const SizedBox(
+                        width: 13,
+                        height: 13,
+                        child: CircularProgressIndicator(strokeWidth: 1.8),
+                      )
+                    : Icon(
+                        translated
+                            ? Icons.undo_rounded
+                            : Icons.translate_rounded,
+                        size: 15,
+                        color: translated ? kAccent : kTextMuted,
+                      ),
+              ),
+            ),
+          if (onTranslate != null)
+            Semantics(
+              label: l.postTranslate,
+              child: const SizedBox.shrink(),
+            ),
         ],
       ),
     );

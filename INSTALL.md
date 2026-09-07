@@ -73,7 +73,8 @@ Nothing is typed, copied or pasted — the two apps talk over Android deep links
 | ✅ | Translates a draft before you post it, with your own DeepL key |
 | ✅ | Publishes posts, with a picture if you want one |
 | ✅ | Opens a post to read its replies and the labels people put on it |
-| ❌ | Cannot yet tag, bookmark or reply |
+| ✅ | Replies to a post, and translates anyone's post with your DeepL key |
+| ❌ | Cannot yet tag or bookmark |
 | ❌ | Cannot delete a post from the interface |
 
 **Posts are real.** Anything you publish lands on your homeserver and shows up
