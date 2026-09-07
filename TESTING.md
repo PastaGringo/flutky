@@ -2,6 +2,37 @@
 
 ## À tester (récents en haut)
 
+### fix: le secret exporté n'est pas la valeur du cookie — v0.7.0 — 2026-09-07
+
+APK : `fr.delvops.flutky` · versionCode **7** · signé avec la clé de débogage.
+
+Le diagnostic a donné la réponse en une ligne : secret de **79 caractères**,
+**2 segments**. Soit 52 (la clé) + 1 (deux-points) + 26 (le vrai secret). Le
+SDK exporte `format!("{public_key}:{cookie}")`, et j'envoyais la chaîne
+entière comme valeur du cookie — le serveur cherchait le secret et trouvait la
+clé collée devant.
+
+- [ ] **Où** : page Diagnostic (icône microscope)
+  - **Étape** : la rouvrir et comparer deux sondes
+  - **Attendu** : « Session — cookie, hôte en paramètre » en **200**, et
+    « Témoin — cookie NON découpé » en **401**. Le contraste entre les deux
+    prouve que c'est bien le découpage qui débloque, et rien d'autre.
+
+- [ ] **Où** : feuille de composition
+  - **Étape** : l'ouvrir sans écrire
+  - **Attendu** : la pastille passe au vert — et cette fois elle a réellement
+    interrogé le serveur.
+
+- [ ] **Où** : feuille de composition
+  - **Étape** : écrire un message et publier
+  - **Attendu** : le post part, apparaît en tête du flux, **et se retrouve sur
+    pubky.app**. C'est la seule preuve qui compte.
+
+- [ ] **Où** : pubky.app, le post publié
+  - **Étape** : vérifier sa date
+  - **Attendu** : l'heure de publication, pas une date absurde — un identifiant
+    Crockford mal calculé se verrait là.
+
 ### feat: page de diagnostic interne — v0.6.0 — 2026-09-07
 
 APK : `fr.delvops.flutky` · versionCode **6** · signé avec la clé de débogage.

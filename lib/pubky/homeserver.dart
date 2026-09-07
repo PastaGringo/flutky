@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'cookie_auth.dart';
 import 'crockford.dart';
 import 'grant_auth.dart';
 import 'ring_session.dart';
@@ -78,7 +79,12 @@ class HomeserverClient {
   /// is grant-based. A cookie session needs no round trip.
   Future<Map<String, String>> _authHeaders() async {
     if (authKind == AuthKind.cookie) {
-      return {'Cookie': '${session.pubky}=${session.grantSecret}'};
+      // The exported token is `<key>:<secret>`, not the cookie value itself.
+      final credential = CookieCredential.parse(
+        session.grantSecret,
+        sessionPubky: session.pubky,
+      );
+      return {'Cookie': credential.header};
     }
 
     final current = _bearer;

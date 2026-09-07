@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'cookie_auth.dart';
 import 'grant_auth.dart';
 import 'homeserver.dart';
 import 'ring_session.dart';
@@ -59,13 +60,11 @@ class SessionDiagnostics {
     return {
       'Longueur': '${secret.length} caractères',
       'Type détecté': isGrantSecret(secret) ? 'grant' : 'cookie',
-      'Forme': switch (secret) {
-        _ when isGrantSecret(secret) => 'préfixe pubky-grant-credential-',
-        _ when secret.length == 26 && isCrockford =>
-          'base32 Crockford sur 26 caractères — la forme documentée '
-              "d'un secret de session cookie",
-        _ when isCrockford => 'base32 Crockford, mais pas 26 caractères',
-        _ => 'ni grant, ni base32 Crockford',
+      'Forme': _describeShape(secret, isCrockford),
+      'Valeur du cookie': switch (_cookieOrNull()) {
+        null => 'indéterminée',
+        final c => '${c.secret.length} caractères'
+            '${c.secret.length == cookieSecretLength ? " — la longueur documentée" : ""}',
       },
       'Segments (:)': '${secret.split(':').length}',
       'Capacités': session.capabilities.isEmpty
@@ -74,10 +73,50 @@ class SessionDiagnostics {
     };
   }
 
+
+  CookieCredential? _cookieOrNull() {
+    if (isGrantSecret(session.grantSecret)) return null;
+    try {
+      return CookieCredential.parse(
+        session.grantSecret,
+        sessionPubky: session.pubky,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Names the shape rather than judging it, so an unexpected token is
+  /// reported as what it is instead of being forced into a known bucket.
+  String _describeShape(String secret, bool isCrockford) {
+    if (isGrantSecret(secret)) return 'préfixe pubky-grant-credential-';
+
+    final colon = secret.indexOf(':');
+    if (colon > 0) {
+      final prefix = secret.substring(0, colon);
+      final rest = secret.substring(colon + 1);
+      final matches = prefix == session.pubky;
+      return '<clé>:<secret> — ${matches ? "la clé correspond" : "CLÉ DIFFÉRENTE"}, '
+          'secret de ${rest.length} caractères. '
+          "C'est ce que rend export_secret() du SDK.";
+    }
+
+    if (secret.length == cookieSecretLength && isCrockford) {
+      return 'base32 Crockford sur $cookieSecretLength caractères — '
+          "la forme documentée d'un secret de session cookie";
+    }
+    if (isCrockford) return 'base32 Crockford, mais pas $cookieSecretLength caractères';
+    return 'ni grant, ni base32 Crockford, ni <clé>:<secret>';
+  }
+
   Future<List<ProbeResult>> run() async {
     final pubky = session.pubky;
     final secret = session.grantSecret;
-    final cookie = '$pubky=$secret';
+    // The value the homeserver expects, once the exported token is split.
+    final credential = _cookieOrNull();
+    final cookie = credential?.header ?? '$pubky=$secret';
+    // Kept as a control: this is what the previous version sent.
+    final rawCookie = '$pubky=$secret';
 
     return [
       // --- Controls: no authentication involved. If these fail, nothing below
@@ -112,6 +151,16 @@ class SessionDiagnostics {
         ),
       ),
       await _probe(
+        name: 'Témoin — cookie NON découpé',
+        detail: 'GET /session?pubky-host=<clé> · Cookie: <clé>=<jeton entier>',
+        expectation: "401 attendu — c'est l'erreur des versions précédentes, "
+            'gardée pour prouver que le découpage est bien ce qui change tout',
+        request: () => _client.get(
+          Uri.parse('$homeserverBase/session?pubky-host=$pubky'),
+          headers: {'Cookie': rawCookie},
+        ),
+      ),
+      await _probe(
         name: 'Session — cookie, hôte en en-tête',
         detail: 'GET /session · en-têtes Cookie + pubky-host',
         expectation: '200 si le cookie est accepté',
@@ -123,10 +172,10 @@ class SessionDiagnostics {
       await _probe(
         name: 'Session — cookie nommé « session »',
         detail: 'GET /session?pubky-host=<clé> · Cookie: session=<secret>',
-        expectation: "au cas où le nom du cookie ne serait pas la clé",
+        expectation: 'au cas où le nom du cookie ne serait pas la clé',
         request: () => _client.get(
           Uri.parse('$homeserverBase/session?pubky-host=$pubky'),
-          headers: {'Cookie': 'session=$secret'},
+          headers: {'Cookie': 'session=${credential?.secret ?? secret}'},
         ),
       ),
       await _probe(
@@ -135,7 +184,7 @@ class SessionDiagnostics {
         expectation: 'au cas où le secret serait déjà un jeton porteur',
         request: () => _client.get(
           Uri.parse('$homeserverBase/session?pubky-host=$pubky'),
-          headers: {'Authorization': 'Bearer $secret'},
+          headers: {'Authorization': 'Bearer ${credential?.secret ?? secret}'},
         ),
       ),
       await _probe(
