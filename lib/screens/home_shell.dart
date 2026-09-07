@@ -10,6 +10,7 @@ import '../settings/locale_controller.dart';
 import '../theme.dart';
 import 'diagnostics_screen.dart';
 import 'feed_screen.dart';
+import 'messages_screen.dart';
 import 'notifications_screen.dart';
 import 'profile_screen.dart';
 import 'settings_screen.dart';
@@ -81,7 +82,12 @@ class _HomeShellState extends State<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final l = L10n.of(context);
-    final titles = [l.titleFeed, l.titleNotifications, l.titleProfile];
+    final titles = [
+      l.titleFeed,
+      l.titleNotifications,
+      l.titleMessages,
+      l.titleProfile,
+    ];
 
     return Scaffold(
       appBar: AppBar(
@@ -153,6 +159,7 @@ class _HomeShellState extends State<HomeShell> {
               nexus: widget.nexus,
               pubky: widget.session.pubky,
             ),
+            const MessagesScreen(),
             ProfileScreen(
               session: widget.session,
               profile: widget.profile,
@@ -178,6 +185,13 @@ class _HomeShellState extends State<HomeShell> {
             selectedIcon:
                 const Icon(Icons.notifications_rounded, color: kAccent),
             label: l.tabNotifications,
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.forum_outlined),
+            selectedIcon: const Icon(Icons.forum_rounded, color: kAccent),
+            // Named WIP rather than greyed out: a disabled tab invites tapping
+            // to find out why, and answers nothing.
+            label: '${l.tabMessages} (WIP)',
           ),
           NavigationDestination(
             icon: const Icon(Icons.person_outline_rounded),

@@ -56,6 +56,20 @@ android {
         }
     }
 
+    // `--target-platform` and `ndk { abiFilters }` only reach libraries the
+    // NDK compiles for us: neither touches the .so files shipped inside a
+    // dependency AAR. ML Kit ships one per architecture, and its x86_64 build
+    // survived both — 18 MB of code that cannot run anyway, since the Flutter
+    // engine is no longer there for that architecture. Excluding at packaging
+    // time is the only filter that applies to every source of native code.
+    //
+    // Emulators are the only x86 Android there is; no phone needs these.
+    packaging {
+        jniLibs {
+            excludes += listOf("lib/x86/**", "lib/x86_64/**")
+        }
+    }
+
     buildTypes {
         release {
             signingConfig = if (hasReleaseKey) {

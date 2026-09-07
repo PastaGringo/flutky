@@ -509,4 +509,48 @@ class L10nFr extends L10n {
 
   @override
   String get composeMentionAdded => 'Mention ajoutée';
+
+  @override
+  String get composeTranslate => 'Traduire';
+
+  @override
+  String get composeTranslateTo => 'Traduire en';
+
+  @override
+  String get composeTranslating => 'Traduction…';
+
+  @override
+  String get composeTranslateFirstUse =>
+      'La première traduction vers une langue télécharge son modèle, environ 30 Mo. Ensuite tout se passe hors ligne.';
+
+  @override
+  String composeTranslateFailed(Object error) {
+    return 'Échec de la traduction : $error';
+  }
+
+  @override
+  String get composeTranslateUndo => 'Annuler';
+
+  @override
+  String get composeTranslateDone =>
+      'Traduit — appuie sur Annuler pour retrouver ton texte';
+
+  @override
+  String get composeTranslateNothing => 'Rien à traduire pour l\'instant';
+
+  @override
+  String get tabMessages => 'Messages';
+
+  @override
+  String get titleMessages => 'Messages';
+
+  @override
+  String get messagesWipTitle => 'La messagerie privée n\'est pas encore faite';
+
+  @override
+  String get messagesWipBody =>
+      'Pubky dispose d\'un protocole chiffré de pair à pair, pubky-noise : chacun écrit sur son propre homeserver et lit celui de l\'autre, sans serveur supplémentaire. Il est encore en version candidate et n\'existe qu\'en bibliothèque Rust, il faut donc le porter avant de pouvoir afficher quoi que ce soit ici.';
+
+  @override
+  String get messagesWipFollow => 'Suivre l\'avancement';
 }

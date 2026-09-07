@@ -509,4 +509,48 @@ class L10nEn extends L10n {
 
   @override
   String get composeMentionAdded => 'Mention added';
+
+  @override
+  String get composeTranslate => 'Translate';
+
+  @override
+  String get composeTranslateTo => 'Translate into';
+
+  @override
+  String get composeTranslating => 'Translating…';
+
+  @override
+  String get composeTranslateFirstUse =>
+      'The first translation into a language downloads its model, about 30 MB. It then works offline.';
+
+  @override
+  String composeTranslateFailed(Object error) {
+    return 'Translation failed: $error';
+  }
+
+  @override
+  String get composeTranslateUndo => 'Undo';
+
+  @override
+  String get composeTranslateDone =>
+      'Translated — tap Undo to get your text back';
+
+  @override
+  String get composeTranslateNothing => 'Nothing to translate yet';
+
+  @override
+  String get tabMessages => 'Messages';
+
+  @override
+  String get titleMessages => 'Messages';
+
+  @override
+  String get messagesWipTitle => 'Private messaging is not built yet';
+
+  @override
+  String get messagesWipBody =>
+      'Pubky has an encrypted peer-to-peer protocol, pubky-noise: each side writes to their own homeserver and reads the other\'s, so no extra server is involved. It is still a release candidate and exists only as a Rust library, so it has to be ported before anything can be shown here.';
+
+  @override
+  String get messagesWipFollow => 'Follow the work';
 }

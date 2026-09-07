@@ -291,5 +291,23 @@
   "composeMention": "Mention someone",
   "composeMentionSearch": "Search by name…",
   "composeMentionNoResult": "Nobody found",
-  "composeMentionAdded": "Mention added"
+  "composeMentionAdded": "Mention added",
+  "composeTranslate": "Translate",
+  "composeTranslateTo": "Translate into",
+  "composeTranslating": "Translating…",
+  "composeTranslateFirstUse": "The first translation into a language downloads its model, about 30 MB. It then works offline.",
+  "composeTranslateFailed": "Translation failed: {error}",
+  "composeTranslateUndo": "Undo",
+  "composeTranslateDone": "Translated — tap Undo to get your text back",
+  "composeTranslateNothing": "Nothing to translate yet",
+  "tabMessages": "Messages",
+  "titleMessages": "Messages",
+  "messagesWipTitle": "Private messaging is not built yet",
+  "messagesWipBody": "Pubky has an encrypted peer-to-peer protocol, pubky-noise: each side writes to their own homeserver and reads the other's, so no extra server is involved. It is still a release candidate and exists only as a Rust library, so it has to be ported before anything can be shown here.",
+  "messagesWipFollow": "Follow the work",
+  "@composeTranslateFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  }
 }

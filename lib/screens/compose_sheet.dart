@@ -4,6 +4,8 @@ import '../l10n/app_localizations.dart';
 import '../pubky/grant_auth.dart';
 import '../pubky/homeserver.dart';
 import '../pubky/nexus.dart';
+import '../pubky/translation.dart';
+import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 import '../pubky/ring_session.dart';
 import '../theme.dart';
 
@@ -64,6 +66,74 @@ class _ComposeSheetState extends State<_ComposeSheet> {
   /// worth attempting only if the homeserver already accepts our credentials.
   bool? _canWrite;
   String? _accessError;
+
+  final _translator = Translator();
+  bool _translating = false;
+
+  /// Kept so a translation can be undone: replacing what someone wrote without
+  /// a way back is a destructive edit, however good the translation is.
+  String? _beforeTranslation;
+
+  Future<void> _translate() async {
+    final text = _controller.text.trim();
+    final l = L10n.of(context);
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l.composeTranslateNothing)),
+      );
+      return;
+    }
+
+    final target = await showModalBottomSheet<TranslateLanguage>(
+      context: context,
+      backgroundColor: kSurface,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => const _LanguagePicker(),
+    );
+    if (target == null || !mounted) return;
+
+    setState(() => _translating = true);
+    try {
+      // The source is detected: someone writing a post knows what language
+      // they used, and asking would be a question with an obvious answer.
+      final source = await _translator.detect(text) ?? TranslateLanguage.english;
+      final translated = await _translator.translate(
+        text,
+        from: source,
+        to: target,
+      );
+      if (!mounted) return;
+      setState(() {
+        _beforeTranslation = _controller.text;
+        _controller.text = translated;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l.composeTranslateDone),
+          action: SnackBarAction(
+            label: l.composeTranslateUndo,
+            onPressed: _undoTranslation,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) setState(() => _error = l.composeTranslateFailed('$e'));
+    } finally {
+      if (mounted) setState(() => _translating = false);
+    }
+  }
+
+  void _undoTranslation() {
+    final before = _beforeTranslation;
+    if (before == null) return;
+    setState(() {
+      _controller.text = before;
+      _beforeTranslation = null;
+    });
+  }
 
   @override
   void initState() {
@@ -129,6 +199,7 @@ class _ComposeSheetState extends State<_ComposeSheet> {
 
   @override
   void dispose() {
+    _translator.close();
     _controller.dispose();
     super.dispose();
   }
@@ -214,6 +285,20 @@ class _ComposeSheetState extends State<_ComposeSheet> {
                 label: l.composeAskJeb,
                 onTap: _sending ? null : () => _insertMention(jebPubky),
               ),
+              const SizedBox(width: 8),
+              _ComposeAction(
+                icon: Icons.translate_rounded,
+                label: _translating ? l.composeTranslating : l.composeTranslate,
+                onTap: (_sending || _translating) ? null : _translate,
+              ),
+              if (_beforeTranslation != null) ...[
+                const SizedBox(width: 8),
+                _ComposeAction(
+                  icon: Icons.undo_rounded,
+                  label: l.composeTranslateUndo,
+                  onTap: _sending ? null : _undoTranslation,
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 12),
@@ -507,6 +592,44 @@ class _MentionPickerState extends State<_MentionPicker> {
                   );
                 },
               ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Target language for a translation. The source is detected, so this is the
+/// only choice to make.
+class _LanguagePicker extends StatelessWidget {
+  const _LanguagePicker();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = L10n.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l.composeTranslateTo,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 16),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            l.composeTranslateFirstUse,
+            style: const TextStyle(color: kTextMuted, fontSize: 12.5, height: 1.45),
+          ),
+          const SizedBox(height: 8),
+          for (final language in Translator.targets)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(languageLabel(language),
+                  style: const TextStyle(fontSize: 15)),
+              onTap: () => Navigator.pop(context, language),
             ),
         ],
       ),

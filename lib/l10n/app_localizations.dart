@@ -960,6 +960,84 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Mention added'**
   String get composeMentionAdded;
+
+  /// No description provided for @composeTranslate.
+  ///
+  /// In en, this message translates to:
+  /// **'Translate'**
+  String get composeTranslate;
+
+  /// No description provided for @composeTranslateTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Translate into'**
+  String get composeTranslateTo;
+
+  /// No description provided for @composeTranslating.
+  ///
+  /// In en, this message translates to:
+  /// **'Translating…'**
+  String get composeTranslating;
+
+  /// No description provided for @composeTranslateFirstUse.
+  ///
+  /// In en, this message translates to:
+  /// **'The first translation into a language downloads its model, about 30 MB. It then works offline.'**
+  String get composeTranslateFirstUse;
+
+  /// No description provided for @composeTranslateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation failed: {error}'**
+  String composeTranslateFailed(Object error);
+
+  /// No description provided for @composeTranslateUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get composeTranslateUndo;
+
+  /// No description provided for @composeTranslateDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Translated — tap Undo to get your text back'**
+  String get composeTranslateDone;
+
+  /// No description provided for @composeTranslateNothing.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to translate yet'**
+  String get composeTranslateNothing;
+
+  /// No description provided for @tabMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get tabMessages;
+
+  /// No description provided for @titleMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get titleMessages;
+
+  /// No description provided for @messagesWipTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Private messaging is not built yet'**
+  String get messagesWipTitle;
+
+  /// No description provided for @messagesWipBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Pubky has an encrypted peer-to-peer protocol, pubky-noise: each side writes to their own homeserver and reads the other\'s, so no extra server is involved. It is still a release candidate and exists only as a Rust library, so it has to be ported before anything can be shown here.'**
+  String get messagesWipBody;
+
+  /// No description provided for @messagesWipFollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow the work'**
+  String get messagesWipFollow;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

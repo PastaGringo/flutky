@@ -31,6 +31,7 @@ and building for iOS needs macOS.
 | ✅ | Mentioning people when composing, searched by display name |
 | ✅ | An "Ask Jeb" shortcut — mention the AI account and its reply lands in your feed |
 | ✅ | Optionally folding your own posts into the Following feed |
+| ✅ | Translating a draft before posting — on-device, no key, no account |
 | ✅ | Built-in diagnostics for the authentication path |
 
 ### Not there yet
@@ -44,6 +45,7 @@ and building for iOS needs macOS.
 | ❌ | Search |
 | ❌ | Push notifications (the tab polls; there is no background delivery) |
 | ❌ | Choosing your own homeserver — `homeserver.pubky.app` is assumed |
+| ❌ | Private messages — the tab is there, deliberately inert |
 | ❌ | iOS |
 
 Missing features are listed rather than reported: no need to open an issue for

@@ -2,6 +2,62 @@
 
 ## À tester (récents en haut)
 
+### feat: traduction du brouillon, onglet PM inerte, articles cités — v0.11.0 — 2026-09-07
+
+- [ ] **Où** : fenêtre d'écriture d'un post
+  - **Étape** : taper trois phrases en français, toucher l'icône de traduction,
+    choisir « English »
+  - **Attendu** : le texte est remplacé par sa traduction, et un bouton
+    *Annuler* revient au texte d'origine. La toute première fois, un modèle se
+    télécharge — quelques secondes d'attente, sur Wi-Fi de préférence.
+
+- [ ] **Où** : même fenêtre, hors ligne (mode avion)
+  - **Étape** : traduire vers une langue déjà utilisée une fois
+  - **Attendu** : la traduction fonctionne quand même — le modèle est sur
+    l'appareil. Vers une langue jamais utilisée, un message dit que le
+    téléchargement a échoué, sans perdre le texte saisi.
+
+- [ ] **Où** : barre d'onglets du bas
+  - **Étape** : toucher l'onglet **PM**
+  - **Attendu** : l'écran s'affiche et annonce que la messagerie n'existe pas
+    encore. Rien n'est cliquable, rien ne part sur le réseau.
+
+- [ ] **Où** : flux, sur un repost qui cite un **article** (kind `long`)
+  - **Étape** : regarder le bloc cité, pas seulement le post principal
+  - **Attendu** : le titre et le début du texte, jamais du JSON brut.
+    Post témoin : `pubky.app/post/w3ase343…/0035NP925DNX0`.
+
+### feat: écriture, suivre, mentions, Ask Jeb, notifications — v0.9.0 et v0.10.0 — 2026-09-07
+
+Livré sans entrée de test à l'époque ; à reprendre ici.
+
+- [ ] **Où** : profil de quelqu'un d'autre
+  - **Étape** : toucher *Suivre*, quitter l'écran, y revenir
+  - **Attendu** : l'état reste « Abonné ». Nexus a du retard : compter
+    quelques secondes avant que le compteur du profil bouge.
+
+- [ ] **Où** : fenêtre d'écriture
+  - **Étape** : taper `@` puis deux lettres d'un nom connu
+  - **Attendu** : une liste de comptes apparaît ; en choisir un insère la
+    mention. Une fois publié, le nom s'affiche à la place de la clé, et le
+    toucher ouvre le profil.
+
+- [ ] **Où** : au-dessus du bouton d'écriture
+  - **Étape** : toucher *Ask Jeb*, poser une question, publier
+  - **Attendu** : le post part avec la mention de Jeb, et sa réponse arrive
+    dans le flux **Abonnements** quelques minutes plus tard. ⚠️ Non éprouvé
+    de mon côté : je ne peux pas publier depuis ton compte.
+
+- [ ] **Où** : Réglages
+  - **Étape** : activer *Inclure mes posts dans Abonnements*, revenir au flux
+  - **Attendu** : tes propres posts s'intercalent dans l'onglet Abonnements.
+
+- [ ] **Où** : Réglages → notifications
+  - **Étape** : activer le rappel toutes les 15 minutes, verrouiller l'écran
+  - **Attendu** : une notification locale arrive s'il y a du nouveau.
+    ⚠️ Android peut retarder fortement une tâche périodique quand l'appareil
+    économise la batterie — un retard n'est pas une panne.
+
 ### build: distribution par Obtainium — v0.8.0 — 2026-09-07
 
 Release : https://github.com/PastaGringo/flutky/releases/tag/v0.8.0

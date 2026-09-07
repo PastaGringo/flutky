@@ -293,7 +293,10 @@ class _QuotedBlock extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (post!.content.isNotEmpty) ...[
+                if (post!.article case final article?) ...[
+                  const SizedBox(height: 8),
+                  _Article(article: article, compact: true),
+                ] else if (post!.content.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   PostContent(
                     content: post!.content,
@@ -425,11 +428,12 @@ class _Metric extends StatelessWidget {
 /// render belongs on a detail screen, which does not exist yet, and pasting a
 /// whole article into a timeline card would drown the rest.
 class _Article extends StatelessWidget {
-  const _Article({required this.article});
+  const _Article({required this.article, this.compact = false});
 
   final ({String title, String body}) article;
 
-  static const _excerptLines = 4;
+  /// Inside a quoted block, where the card already carries its own header.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -439,8 +443,8 @@ class _Article extends StatelessWidget {
       children: [
         Text(
           article.title.isEmpty ? l.articleUntitled : article.title,
-          style: const TextStyle(
-            fontSize: 16,
+          style: TextStyle(
+            fontSize: compact ? 14 : 16,
             fontWeight: FontWeight.w700,
             height: 1.35,
           ),
@@ -449,9 +453,13 @@ class _Article extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             _plainExcerpt(article.body),
-            maxLines: _excerptLines,
+            maxLines: compact ? 3 : 4,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(height: 1.5, fontSize: 14, color: kTextMuted),
+            style: TextStyle(
+              height: 1.5,
+              fontSize: compact ? 13 : 14,
+              color: kTextMuted,
+            ),
           ),
         ],
       ],
