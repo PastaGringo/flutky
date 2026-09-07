@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../pubky/grant_auth.dart';
 import '../pubky/homeserver.dart';
 import '../pubky/ring_session.dart';
 import '../theme.dart';
@@ -41,6 +42,34 @@ class _ComposeSheetState extends State<_ComposeSheet> {
   final _controller = TextEditingController();
   bool _sending = false;
   String? _error;
+
+  /// Result of minting a token before the user types anything: publishing is
+  /// worth attempting only if the homeserver already accepts our credentials.
+  bool? _canWrite;
+  String? _accessError;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAccess();
+  }
+
+  Future<void> _checkAccess() async {
+    final client = HomeserverClient(session: widget.session);
+    try {
+      await client.checkWriteAccess();
+      if (mounted) setState(() => _canWrite = true);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _canWrite = false;
+          _accessError = '$e';
+        });
+      }
+    } finally {
+      client.close();
+    }
+  }
 
   @override
   void dispose() {
@@ -95,10 +124,25 @@ class _ComposeSheetState extends State<_ComposeSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Nouveau post',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 17),
+          Row(
+            children: [
+              Text(
+                'Nouveau post',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 17),
+              ),
+              const Spacer(),
+              _AccessBadge(
+                kind: isGrantSecret(widget.session.grantSecret)
+                    ? AuthKind.grant
+                    : AuthKind.cookie,
+                canWrite: _canWrite,
+              ),
+            ],
           ),
+          if (_accessError != null) ...[
+            const SizedBox(height: 12),
+            ErrorPanel(message: _accessError!),
+          ],
           const SizedBox(height: 14),
           TextField(
             controller: _controller,
@@ -167,6 +211,35 @@ class _ComposeSheetState extends State<_ComposeSheet> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Says which authentication the session carries, and whether the homeserver
+/// has already accepted it — checked before the user writes a word, so a
+/// refusal never arrives after the effort of composing.
+class _AccessBadge extends StatelessWidget {
+  const _AccessBadge({required this.kind, required this.canWrite});
+
+  final AuthKind kind;
+  final bool? canWrite;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color) = switch (canWrite) {
+      null => ('vérification…', kTextMuted),
+      true => ('${kind.label} · écriture ouverte', kAccent),
+      false => ('${kind.label} · écriture refusée', kDanger),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.45)),
+      ),
+      child: Text(label, style: TextStyle(color: color, fontSize: 11.5)),
     );
   }
 }

@@ -2,6 +2,39 @@
 
 ## À tester (récents en haut)
 
+### feat: authentification grant — publication débloquée — v0.5.0 — 2026-09-07
+
+APK : `fr.delvops.flutky` · versionCode **5** · signé avec la clé de débogage.
+
+Le 401 de la v0.4.0 était le bon diagnostic : ta session est de type **grant**,
+pas cookie. La v0.5.0 implémente l'échange grant → jeton porteur en Dart
+(preuve de possession signée en Ed25519), ce que seul le SDK Rust faisait
+jusqu'ici.
+
+- [ ] **Où** : onglet « Flux », bouton flottant, en haut à droite de la feuille
+  - **Étape** : ouvrir la feuille de composition **sans rien écrire**, et
+    regarder la pastille
+  - **Attendu** : « vérification… » puis **« grant · écriture ouverte »** en
+    vert. Si elle passe au rouge, le message sous le titre donne la réponse
+    exacte du serveur — copie-la moi.
+
+- [ ] **Où** : feuille de composition
+  - **Étape** : écrire un message, publier
+  - **Attendu** : la feuille se ferme, le post apparaît en tête du flux avec
+    « en attente d'indexation ». **Vérifier ensuite sur pubky.app** que le post
+    y est bien — c'est la seule preuve qui compte.
+
+- [ ] **Où** : pubky.app, le post publié depuis Flutky
+  - **Étape** : le regarder de près
+  - **Attendu** : contenu intact, date correcte. Une date absurde signalerait
+    un identifiant Crockford mal calculé — le cas où l'indexeur jette le post
+    en silence.
+
+- [ ] **Où** : feuille de composition, plus d'une heure après la connexion
+  - **Étape** : publier de nouveau
+  - **Attendu** : ça marche quand même. Le jeton porteur expire au bout d'une
+    heure et doit être renouvelé tout seul à partir du grant.
+
 ### feat: mentions cliquables et écriture de posts — v0.4.0 — 2026-09-07
 
 APK : `fr.delvops.flutky` · versionCode **4** · signé avec la clé de débogage.

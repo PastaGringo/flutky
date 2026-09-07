@@ -3,38 +3,46 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'crockford.dart';
+import 'grant_auth.dart';
 import 'ring_session.dart';
 
 /// The homeserver this proof of concept writes to.
 ///
 /// Resolving a user's own homeserver means decoding a signed pkarr packet
-/// (a DNS message behind 64 bytes of signature), which is a chunk of work this
-/// POC does not carry. Everyone indexed by Nexus today is on the official one;
-/// an account hosted elsewhere gets a clear error rather than a silent failure.
+/// (a DNS message behind 64 bytes of signature), which this POC does not carry.
+/// Everyone Nexus indexes today is on the official one; an account hosted
+/// elsewhere gets a clear error rather than a silent failure.
 const homeserverBase = 'https://homeserver.pubky.app';
 
 /// Longest `short` post pubky-app-specs accepts. Enforced here so the refusal
 /// happens under the text field rather than as an opaque 4xx.
 const maxShortPostLength = 2000;
 
-/// The write path was refused.
-///
-/// The message carries the raw response on purpose. The homeserver answers 401
-/// even for a route that does not exist — authentication runs before routing,
-/// measured 2026-09-07 — so a refusal alone does not say whether the problem is
-/// the session or the URL. The body is what tells them apart.
+/// How the session authenticates writes. Which one applies is decided by the
+/// secret's own format, not by guesswork.
+enum AuthKind {
+  /// Ring ≤ 1.18: a 26-character session secret presented as a cookie whose
+  /// name is the user's public key.
+  cookie('cookie'),
+
+  /// Ring ≥ 1.19: refresh material exchanged for a short-lived bearer.
+  grant('grant');
+
+  const AuthKind(this.label);
+  final String label;
+}
+
 class WriteUnauthorized implements Exception {
-  const WriteUnauthorized(this.status, this.body);
+  const WriteUnauthorized(this.status, this.body, this.kind);
   final int status;
   final String body;
+  final AuthKind kind;
 
   @override
   String toString() =>
-      "Le homeserver a refusé l'écriture ($status).\n\n"
-      'Cause la plus probable : la session Ring est de type « grant », qui '
-      'exige un jeton porteur signé — cette version ne sait présenter qu’un '
-      'cookie.\n\n'
-      'Réponse du serveur : ${body.isEmpty ? "(vide)" : body}';
+      "Le homeserver a refusé l'écriture ($status), authentification "
+      '« ${kind.label} ».\n\nRéponse du serveur : '
+      '${body.isEmpty ? "(vide)" : body}';
 }
 
 class WriteFailed implements Exception {
@@ -47,11 +55,6 @@ class WriteFailed implements Exception {
 }
 
 /// Writes pubky-app resources on the user's behalf.
-///
-/// Authentication is a plain `Cookie` header. The homeserver's own OpenAPI
-/// spells the scheme out: "the cookie name is the user's z-base-32 public key
-/// and the value is the session secret". That is what makes writing possible
-/// here without any Rust — as long as Ring handed back a cookie session.
 class HomeserverClient {
   HomeserverClient({required this.session, http.Client? client})
       : _client = client ?? http.Client();
@@ -60,16 +63,52 @@ class HomeserverClient {
   final http.Client _client;
   static const _timeout = Duration(seconds: 30);
 
+  BearerToken? _bearer;
+
+  AuthKind get authKind =>
+      isGrantSecret(session.grantSecret) ? AuthKind.grant : AuthKind.cookie;
+
   /// Legacy addressing on purpose: the documented `/storage/{user}/{path}`
   /// form answers 500 on the official homeserver (measured again 2026-09-07),
   /// while `?pubky-host=` answers 200.
   Uri _entry(String path) =>
       Uri.parse('$homeserverBase$path?pubky-host=${session.pubky}');
 
-  Map<String, String> get _headers => {
-        'Cookie': '${session.pubky}=${session.grantSecret}',
-        'Content-Type': 'application/json',
-      };
+  /// Builds the auth header, minting or refreshing a bearer when the session
+  /// is grant-based. A cookie session needs no round trip.
+  Future<Map<String, String>> _authHeaders() async {
+    if (authKind == AuthKind.cookie) {
+      return {'Cookie': '${session.pubky}=${session.grantSecret}'};
+    }
+
+    final current = _bearer;
+    if (current != null && !current.needsRefresh) {
+      return {'Authorization': 'Bearer ${current.token}'};
+    }
+
+    final stored = StoredGrant.parse(session.grantSecret);
+    final claims = GrantClaims.fromJws(stored.grantJws);
+    if (claims.isExpired) {
+      throw const GrantFormatError(
+        'Le grant a expiré. Il faut se reconnecter via Pubky Ring.',
+      );
+    }
+
+    final fresh = await exchangeGrantForBearer(
+      stored: stored,
+      claims: claims,
+      baseUrl: homeserverBase,
+      client: _client,
+    );
+    _bearer = fresh;
+    return {'Authorization': 'Bearer ${fresh.token}'};
+  }
+
+  /// Mints a token without writing anything — used to tell the user whether
+  /// publishing will work before they have typed a word.
+  Future<void> checkWriteAccess() async {
+    await _authHeaders();
+  }
 
   /// Publishes a short post and returns its id.
   ///
@@ -91,13 +130,16 @@ class HomeserverClient {
     final res = await _client
         .put(
           _entry('/pub/pubky.app/posts/$id'),
-          headers: _headers,
+          headers: {
+            ...await _authHeaders(),
+            'Content-Type': 'application/json',
+          },
           body: utf8.encode(jsonEncode({'content': trimmed, 'kind': 'short'})),
         )
         .timeout(_timeout);
 
     if (res.statusCode == 401 || res.statusCode == 403) {
-      throw WriteUnauthorized(res.statusCode, _shorten(res.body));
+      throw WriteUnauthorized(res.statusCode, _shorten(res.body), authKind);
     }
     if (res.statusCode != 200 && res.statusCode != 201) {
       throw WriteFailed(res.statusCode, _shorten(res.body));
@@ -124,10 +166,10 @@ class HomeserverClient {
 
   Future<void> deletePost(String id) async {
     final res = await _client
-        .delete(_entry('/pub/pubky.app/posts/$id'), headers: _headers)
+        .delete(_entry('/pub/pubky.app/posts/$id'), headers: await _authHeaders())
         .timeout(_timeout);
     if (res.statusCode == 401 || res.statusCode == 403) {
-      throw WriteUnauthorized(res.statusCode, _shorten(res.body));
+      throw WriteUnauthorized(res.statusCode, _shorten(res.body), authKind);
     }
     if (res.statusCode >= 400) {
       throw WriteFailed(res.statusCode, _shorten(res.body));
@@ -137,5 +179,5 @@ class HomeserverClient {
   void close() => _client.close();
 
   static String _shorten(String body) =>
-      body.length <= 200 ? body : '${body.substring(0, 200)}…';
+      body.length <= 300 ? body : '${body.substring(0, 300)}…';
 }
