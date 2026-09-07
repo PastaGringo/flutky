@@ -10,6 +10,7 @@ import '../settings/feed_preferences.dart';
 import '../theme.dart';
 import 'compose_sheet.dart';
 import 'post_card.dart';
+import 'post_screen.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({
@@ -203,6 +204,20 @@ class _FeedScreenState extends State<FeedScreen> {
     _reload();
   }
 
+  void _open(PubkyPost post) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PostScreen(
+          nexus: widget.nexus,
+          session: widget.session,
+          author: post.author,
+          postId: post.id,
+          known: post,
+        ),
+      ),
+    );
+  }
+
   Future<void> _compose({String initialContent = ''}) async {
     final published = await showComposeSheet(
       context,
@@ -223,8 +238,8 @@ class _FeedScreenState extends State<FeedScreen> {
           id: published.id,
           author: widget.session.pubky,
           content: published.content,
-          kind: 'short',
-          attachments: const [],
+          kind: published.attachments.isEmpty ? 'short' : 'image',
+          attachments: published.attachments,
           counts: const {},
           tags: const [],
           indexedAt: DateTime.now(),
@@ -236,9 +251,43 @@ class _FeedScreenState extends State<FeedScreen> {
       SnackBar(content: Text(L10n.of(context).feedPublished)),
     );
 
-    // Nudge the indexer. Best effort: the post exists on the homeserver either
-    // way, and the pending card stays until a reload brings back the real one.
+    // The optimistic card goes through the same resolution as a fetched page.
+    // Without this it is the one card whose mentions have no profile behind
+    // them, so a mention the author just picked by name renders as a shortened
+    // key — the one place where it is most obviously wrong.
+    unawaited(_resolve([_pending.first]));
+
+    // Nudge the indexer, then watch for the post to appear.
     unawaited(widget.nexus.requestIngest(widget.session.pubky));
+    unawaited(_awaitIndexing(published.id));
+  }
+
+  /// Polls until the indexer has the post, then swaps the optimistic card for
+  /// the real one.
+  ///
+  /// Without this, « en attente d'indexation » was true forever: nothing ever
+  /// looked again, so the card kept its placeholder wording and its empty
+  /// counters until a manual reload. Measured on the live network, indexing
+  /// lands in a second or two — but a minute of polling costs nothing and
+  /// covers a slow one.
+  Future<void> _awaitIndexing(String id) async {
+    for (var attempt = 0; attempt < 12; attempt++) {
+      await Future<void>.delayed(const Duration(seconds: 5));
+      if (!mounted || !_pending.any((p) => p.id == id)) return;
+
+      final indexed = await widget.nexus.fetchPost(widget.session.pubky, id);
+      if (indexed == null) continue;
+      if (!mounted) return;
+
+      setState(() {
+        _pending.removeWhere((p) => p.id == id);
+        // In front of the stream: it is the newest thing there is, and the
+        // page underneath was fetched before it existed.
+        _posts.insert(0, indexed);
+      });
+      unawaited(_resolve([indexed]));
+      return;
+    }
   }
 
   @override
@@ -309,6 +358,7 @@ class _FeedScreenState extends State<FeedScreen> {
                         final quotedUri = post.repostedUri ?? post.repliedUri;
                         final quoted =
                             quotedUri == null ? null : _quoted[quotedUri];
+                        final isPending = i < _pending.length;
                         return PostCard(
                           post: post,
                           nexus: widget.nexus,
@@ -317,7 +367,10 @@ class _FeedScreenState extends State<FeedScreen> {
                           quoted: quoted,
                           quotedAuthor:
                               quoted == null ? null : _profiles[quoted.author],
-                          pending: i < _pending.length,
+                          pending: isPending,
+                          // A post the indexer has not seen has no thread to
+                          // open yet, so it stays inert until it does.
+                          onOpen: isPending ? null : () => _open(post),
                         );
                       },
                     ),

@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../l10n/app_localizations.dart';
 
 import '../pubky/grant_auth.dart';
@@ -11,7 +14,11 @@ import '../theme.dart';
 
 /// What a successful publish hands back: enough to render the post before the
 /// indexer has seen it.
-typedef PublishedPost = ({String id, String content});
+typedef PublishedPost = ({
+  String id,
+  String content,
+  List<String> attachments,
+});
 
 /// Composes and publishes a short post.
 ///
@@ -78,6 +85,16 @@ class _ComposeSheetState extends State<_ComposeSheet> {
   /// alias and the mention simply does not happen — which is what deleting
   /// it meant.
   final _aliases = <String, String>{};
+
+  /// The picture to publish with the post, already in memory.
+  ///
+  /// Held as bytes rather than as a path: the id of a blob **is** its BLAKE3
+  /// hash, so the bytes have to be read before anything can be named — and
+  /// reading them twice to hash then upload would be a waste on a phone.
+  Uint8List? _imageBytes;
+  String? _imageName;
+  String? _imageType;
+  double _uploadProgress = 0;
 
   /// Result of minting a token before the user types anything: publishing is
   /// worth attempting only if the homeserver already accepts our credentials.
@@ -156,15 +173,9 @@ class _ComposeSheetState extends State<_ComposeSheet> {
         _beforeTranslation = _controller.text;
         _controller.text = translated;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l.composeTranslateDone),
-          action: SnackBarAction(
-            label: l.composeTranslateUndo,
-            onPressed: _undoTranslation,
-          ),
-        ),
-      );
+      // No confirmation banner: the text visibly changed, and the Undo chip
+      // that appears in the action row above says the same thing without
+      // covering a third of the sheet.
     } on TranslationRefused catch (e) {
       // The two refusals a person can act on say what to do; anything else
       // shows the service's own wording, which at least names the cause.
@@ -240,6 +251,48 @@ class _ComposeSheetState extends State<_ComposeSheet> {
     });
   }
 
+  Future<void> _pickImage() async {
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        // Resized by the picker rather than uploaded whole: a modern phone
+        // photo is 6 to 10 MB, and Nexus serves it back at 1920 px anyway.
+        maxWidth: 2048,
+        maxHeight: 2048,
+        imageQuality: 88,
+      );
+      if (picked == null) return;
+
+      final bytes = await picked.readAsBytes();
+      if (!mounted) return;
+      setState(() {
+        _imageBytes = bytes;
+        _imageName = picked.name;
+        _imageType = picked.mimeType ?? _typeFromName(picked.name);
+        _error = null;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _error = '$e');
+    }
+  }
+
+  /// The picker leaves the type null on some Android versions, and the file
+  /// record needs one — a blob with the wrong content type is served back with
+  /// it, and the image never renders.
+  static String _typeFromName(String name) {
+    final lower = name.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.gif')) return 'image/gif';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    return 'image/jpeg';
+  }
+
+  void _removeImage() => setState(() {
+        _imageBytes = null;
+        _imageName = null;
+        _imageType = null;
+      });
+
   Future<void> _pickMention() async {
     final picked = await showModalBottomSheet<PubkyProfile>(
       context: context,
@@ -263,16 +316,32 @@ class _ComposeSheetState extends State<_ComposeSheet> {
 
   Future<void> _publish() async {
     final content = _wireContent();
-    if (content.isEmpty || _sending) return;
+    final image = _imageBytes;
+    if ((content.isEmpty && image == null) || _sending) return;
 
     setState(() {
       _sending = true;
+      _uploadProgress = 0;
       _error = null;
     });
 
     final client = HomeserverClient(session: widget.session);
     try {
-      final id = await client.createShortPost(content);
+      // The picture goes up first: the post has to point at a file that
+      // already exists, and a post published before its image would render
+      // broken for everyone who read it in between.
+      final attachments = <String>[];
+      if (image != null) {
+        if (mounted) setState(() => _uploadProgress = 0.5);
+        attachments.add(await client.uploadImage(
+          image,
+          name: _imageName ?? 'image.jpg',
+          contentType: _imageType ?? 'image/jpeg',
+        ));
+      }
+      if (mounted) setState(() => _uploadProgress = 1);
+
+      final id = await client.createShortPost(content, attachments: attachments);
 
       // The 201 alone is not proof: read it back from the homeserver, which
       // is the only source that answers immediately after a write.
@@ -281,7 +350,12 @@ class _ComposeSheetState extends State<_ComposeSheet> {
         throw const WriteFailed(0, 'écrit, mais introuvable à la relecture');
       }
 
-      if (mounted) Navigator.pop(context, (id: id, content: content));
+      if (mounted) {
+        Navigator.pop(
+          context,
+          (id: id, content: content, attachments: attachments),
+        );
+      }
     } on ArgumentError catch (e) {
       if (mounted) setState(() => _error = e.message.toString());
     } catch (e) {
@@ -347,6 +421,12 @@ class _ComposeSheetState extends State<_ComposeSheet> {
               ),
               const SizedBox(width: 8),
               _ComposeAction(
+                icon: Icons.image_outlined,
+                label: l.composeImage,
+                onTap: (_sending || _imageBytes != null) ? null : _pickImage,
+              ),
+              const SizedBox(width: 8),
+              _ComposeAction(
                 icon: Icons.translate_rounded,
                 label: _translating ? l.composeTranslating : l.composeTranslate,
                 onTap: (_sending || _translating) ? null : _translate,
@@ -382,6 +462,29 @@ class _ComposeSheetState extends State<_ComposeSheet> {
                   ),
                 ),
               ],
+            ),
+          ],
+          if (_imageBytes case final bytes?) ...[
+            const SizedBox(height: 12),
+            _ImagePreview(
+              bytes: bytes,
+              name: _imageName ?? '',
+              onRemove: _sending ? null : _removeImage,
+            ),
+          ],
+          if (_sending && _imageBytes != null) ...[
+            const SizedBox(height: 10),
+            // A picture takes seconds to travel, and a button that merely
+            // spins says nothing about whether anything is happening.
+            LinearProgressIndicator(
+              value: _uploadProgress == 0 ? null : _uploadProgress,
+              backgroundColor: kBackground,
+              minHeight: 3,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              l.composeUploading,
+              style: const TextStyle(color: kTextMuted, fontSize: 12),
             ),
           ],
           const SizedBox(height: 12),
@@ -435,7 +538,10 @@ class _ComposeSheetState extends State<_ComposeSheet> {
           ],
           const SizedBox(height: 16),
           FilledButton(
-            onPressed: (_sending || length == 0 || tooLong) ? null : _publish,
+            onPressed:
+                (_sending || (length == 0 && _imageBytes == null) || tooLong)
+                    ? null
+                    : _publish,
             child: _sending
                 ? const SizedBox(
                     width: 20,
@@ -832,6 +938,73 @@ class _LanguageField extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The chosen picture, with a way out.
+///
+/// Shown from the bytes already in memory rather than re-read from disk: they
+/// are what will be hashed and uploaded, so this previews the actual thing
+/// rather than a file that could differ.
+class _ImagePreview extends StatelessWidget {
+  const _ImagePreview({
+    required this.bytes,
+    required this.name,
+    required this.onRemove,
+  });
+
+  final Uint8List bytes;
+  final String name;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = L10n.of(context);
+    final kb = (bytes.length / 1024).round();
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: Stack(
+        children: [
+          Image.memory(
+            bytes,
+            width: double.infinity,
+            height: 160,
+            fit: BoxFit.cover,
+          ),
+          Positioned(
+            right: 8,
+            top: 8,
+            child: Material(
+              color: Colors.black.withValues(alpha: 0.55),
+              shape: const CircleBorder(),
+              child: IconButton(
+                onPressed: onRemove,
+                icon: const Icon(Icons.close_rounded, size: 18),
+                color: Colors.white,
+                tooltip: l.composeImageRemove,
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 8,
+            bottom: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                '$kb ko',
+                style: const TextStyle(color: Colors.white, fontSize: 11),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -87,13 +87,27 @@ class ProfileLink {
 }
 
 class ProfileTag {
-  const ProfileTag({required this.label, required this.taggersCount});
+  const ProfileTag({
+    required this.label,
+    required this.taggersCount,
+    this.taggers = const [],
+  });
+
   final String label;
   final int taggersCount;
+
+  /// Who applied it. Nexus publishes the keys, which is what makes a label
+  /// auditable rather than a number — and lets a single tagger be named.
+  final List<String> taggers;
 
   factory ProfileTag.fromJson(Map<String, dynamic> json) => ProfileTag(
         label: json['label']?.toString() ?? '',
         taggersCount: (json['taggers_count'] as num?)?.toInt() ?? 0,
+        taggers: ((json['taggers'] ?? json['taggers_id']) as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .where((e) => e.isNotEmpty)
+                .toList() ??
+            const [],
       );
 }
 
@@ -385,6 +399,42 @@ class NexusClient {
       throw NexusError(res.statusCode, _shorten(res.body));
     }
 
+    final decoded = jsonDecode(utf8.decode(res.bodyBytes));
+    if (decoded is! List) return const [];
+    return decoded
+        .whereType<Map<String, dynamic>>()
+        .map(PubkyPost.fromJson)
+        .toList();
+  }
+
+  /// The replies to one post, oldest first as Nexus serves them.
+  ///
+  /// `source=post_replies` needs **both** `author_id` and `post_id`: with only
+  /// one it answers 400 rather than falling back to something plausible, which
+  /// is the good kind of refusal.
+  Future<List<PubkyPost>> fetchReplies({
+    required String author,
+    required String postId,
+    String? observerId,
+    int limit = 30,
+    int skip = 0,
+  }) async {
+    final query = <String, String>{
+      'source': 'post_replies',
+      'author_id': author,
+      'post_id': postId,
+      'limit': '${limit.clamp(1, 50)}',
+      'skip': '$skip',
+      'include_attachment_metadata': 'true',
+      'viewer_id': ?observerId,
+    };
+    final res = await _client
+        .get(Uri.parse('$nexusBase/v0/stream/posts')
+            .replace(queryParameters: query))
+        .timeout(_timeout);
+    if (res.statusCode != 200) {
+      throw NexusError(res.statusCode, _shorten(res.body));
+    }
     final decoded = jsonDecode(utf8.decode(res.bodyBytes));
     if (decoded is! List) return const [];
     return decoded

@@ -297,7 +297,6 @@
   "composeTranslating": "Traduction…",
   "composeTranslateFailed": "Échec de la traduction : {error}",
   "composeTranslateUndo": "Annuler",
-  "composeTranslateDone": "Traduit — appuie sur Annuler pour retrouver ton texte",
   "composeTranslateNothing": "Rien à traduire pour l'instant",
   "tabMessages": "Messages",
   "titleMessages": "Messages",
@@ -331,5 +330,14 @@
   "settingsDeepLChecking": "Vérification de la clé…",
   "settingsDeepLValid": "Clé acceptée — {used} caractères utilisés sur {limit}.",
   "settingsDeepLInvalid": "DeepL a refusé cette clé.",
-  "composeTranslateNoKey": "La traduction demande une clé DeepL. Ajoute-la dans les réglages — le plan gratuit couvre 500 000 caractères par mois."
+  "composeTranslateNoKey": "La traduction demande une clé DeepL. Ajoute-la dans les réglages — le plan gratuit couvre 500 000 caractères par mois.",
+  "postTitle": "Post",
+  "postLoading": "Chargement…",
+  "postGone": "Ce post n'est pas dans l'index — il a peut-être été supprimé.",
+  "postInReplyTo": "EN RÉPONSE À",
+  "postNoReplies": "AUCUNE RÉPONSE POUR L'INSTANT",
+  "postReplies": "{count, plural, =1{1 RÉPONSE} other{{count} RÉPONSES}}",
+  "composeImage": "Image",
+  "composeImageRemove": "Retirer l'image",
+  "composeUploading": "Envoi de l'image…"
 }

@@ -528,10 +528,6 @@ class L10nFr extends L10n {
   String get composeTranslateUndo => 'Annuler';
 
   @override
-  String get composeTranslateDone =>
-      'Traduit — appuie sur Annuler pour retrouver ton texte';
-
-  @override
   String get composeTranslateNothing => 'Rien à traduire pour l\'instant';
 
   @override
@@ -629,4 +625,40 @@ class L10nFr extends L10n {
   @override
   String get composeTranslateNoKey =>
       'La traduction demande une clé DeepL. Ajoute-la dans les réglages — le plan gratuit couvre 500 000 caractères par mois.';
+
+  @override
+  String get postTitle => 'Post';
+
+  @override
+  String get postLoading => 'Chargement…';
+
+  @override
+  String get postGone =>
+      'Ce post n\'est pas dans l\'index — il a peut-être été supprimé.';
+
+  @override
+  String get postInReplyTo => 'EN RÉPONSE À';
+
+  @override
+  String get postNoReplies => 'AUCUNE RÉPONSE POUR L\'INSTANT';
+
+  @override
+  String postReplies(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count RÉPONSES',
+      one: '1 RÉPONSE',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get composeImage => 'Image';
+
+  @override
+  String get composeImageRemove => 'Retirer l\'image';
+
+  @override
+  String get composeUploading => 'Envoi de l\'image…';
 }

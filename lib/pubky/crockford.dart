@@ -38,6 +38,29 @@ String crockfordId(int microseconds) {
   return out.toString(); // 13 characters
 }
 
+/// Encodes arbitrary bytes, for the ids that are hashes rather than instants.
+///
+/// A blob is addressed by the Crockford base32 of the first half of its BLAKE3
+/// hash. Note that pubky-app-specs' own comment says "Z-base32 alphabet" while
+/// the line below it calls `Alphabet::Crockford` — the code is what the network
+/// agrees on, and a real blob id (`CHAQT8HKR62Z7898R7TPEBHWBM`, upper case)
+/// settles it.
+String crockfordBytes(List<int> bytes) {
+  var bits = 0;
+  var buffer = 0;
+  final out = StringBuffer();
+  for (final byte in bytes) {
+    buffer = (buffer << 8) | byte;
+    bits += 8;
+    while (bits >= 5) {
+      out.write(_alphabet[(buffer >> (bits - 5)) & 31]);
+      bits -= 5;
+    }
+  }
+  if (bits > 0) out.write(_alphabet[(buffer << (5 - bits)) & 31]);
+  return out.toString();
+}
+
 /// Id for a resource created now.
 String newCrockfordId() =>
     crockfordId(DateTime.now().toUtc().microsecondsSinceEpoch);

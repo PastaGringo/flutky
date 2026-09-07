@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class FeedPreferences extends ChangeNotifier {
   static const _includeOwnKey = 'feed_include_own_v1';
   static const _deepLKeyKey = 'translation_deepl_key_v1';
+  static const _seenNotificationsKey = 'notifications_seen_ms_v1';
 
   /// Nexus's `following` stream covers the accounts you follow — not you.
   /// Off by default, because that is what the source actually means; turning
@@ -18,11 +19,21 @@ class FeedPreferences extends ChangeNotifier {
   String _deepLKey = '';
   String get deepLKey => _deepLKey;
 
+  /// When the notification list was last opened, in milliseconds.
+  ///
+  /// Nexus has no read/unread state: notifications are a stream with
+  /// timestamps and nothing else. So "unread" is decided here, by comparing
+  /// against this — which also means the count is per device, and honest
+  /// about it rather than pretending to be account-wide.
+  int _seenNotificationsMs = 0;
+  int get seenNotificationsMs => _seenNotificationsMs;
+
   Future<void> load() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       _includeOwnPosts = prefs.getBool(_includeOwnKey) ?? false;
       _deepLKey = prefs.getString(_deepLKeyKey) ?? '';
+      _seenNotificationsMs = prefs.getInt(_seenNotificationsKey) ?? 0;
       notifyListeners();
     } catch (_) {
       // Unreadable preferences fall back to the defaults above.
@@ -46,6 +57,20 @@ class FeedPreferences extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_deepLKeyKey, _deepLKey);
+    } catch (_) {
+      // The choice still applies for this run.
+    }
+  }
+
+  /// Marks everything up to [ms] as seen. Never moves backwards: a stale list
+  /// arriving late must not resurrect notifications already dismissed.
+  Future<void> markNotificationsSeen(int ms) async {
+    if (ms <= _seenNotificationsMs) return;
+    _seenNotificationsMs = ms;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_seenNotificationsKey, ms);
     } catch (_) {
       // The choice still applies for this run.
     }

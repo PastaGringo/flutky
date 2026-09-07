@@ -23,6 +23,7 @@ class PostCard extends StatelessWidget {
     this.quoted,
     this.quotedAuthor,
     this.pending = false,
+    this.onOpen,
   });
 
   final PubkyPost post;
@@ -39,13 +40,17 @@ class PostCard extends StatelessWidget {
   /// Published from this device and not yet visible through the indexer.
   final bool pending;
 
+  /// Opens the thread. Absent inside the thread itself, where tapping a card
+  /// to reach the screen you are already on is a dead end.
+  final VoidCallback? onOpen;
+
   @override
   Widget build(BuildContext context) {
     final l = L10n.of(context);
     final author = profiles[post.author];
     final name = displayName(author, post.author, l);
 
-    return Panel(
+    final card = Panel(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -87,7 +92,10 @@ class PostCard extends StatelessWidget {
               knownProfiles: profiles,
             ),
           ],
-          if (post.imageUrls().isNotEmpty) ...[
+          // Not while pending: the indexer serves the variants, and it has
+          // not seen the file yet — the card would flash a broken image for
+          // the few seconds before indexing lands.
+          if (!pending && post.imageUrls().isNotEmpty) ...[
             const SizedBox(height: 12),
             _Images(urls: post.imageUrls()),
           ],
@@ -103,6 +111,16 @@ class PostCard extends StatelessWidget {
           _Metrics(post: post),
         ],
       ),
+    );
+
+    // The mentions and links inside carry their own tap recognisers, and those
+    // win over this one — so opening the thread never steals a tap meant for a
+    // profile.
+    if (onOpen == null) return card;
+    return InkWell(
+      onTap: onOpen,
+      borderRadius: BorderRadius.circular(16),
+      child: card,
     );
   }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -49,6 +51,50 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _tab = 0;
 
+  /// Notifications newer than the last time the list was opened.
+  int _unread = 0;
+  Timer? _poll;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_countUnread());
+    // Nexus offers no push and no unread state, so the only way to know is to
+    // ask. Two minutes is often enough to notice a reply while composing, and
+    // rare enough not to matter.
+    _poll = Timer.periodic(
+      const Duration(minutes: 2),
+      (_) => unawaited(_countUnread()),
+    );
+    widget.preferences.addListener(_onPreferences);
+  }
+
+  @override
+  void dispose() {
+    _poll?.cancel();
+    widget.preferences.removeListener(_onPreferences);
+    super.dispose();
+  }
+
+  /// Marking the list as seen changes what counts as unread, so the badge is
+  /// recomputed rather than left to the next poll.
+  void _onPreferences() => unawaited(_countUnread());
+
+  Future<void> _countUnread() async {
+    try {
+      final items = await widget.nexus
+          .fetchNotifications(pubky: widget.session.pubky, limit: 30);
+      final since = widget.preferences.seenNotificationsMs;
+      final unread = items
+          .where((n) => n.timestamp.millisecondsSinceEpoch > since)
+          .length;
+      if (mounted && unread != _unread) setState(() => _unread = unread);
+    } catch (_) {
+      // A failed count leaves the badge as it was: showing zero because the
+      // network hiccuped would be worse than showing a stale number.
+    }
+  }
+
   Future<void> _confirmDisconnect() async {
     final l = L10n.of(context);
     final ok = await showDialog<bool>(
@@ -78,9 +124,17 @@ class _HomeShellState extends State<HomeShell> {
   /// Notifications are a place you go to, not a place you live in — so they
   /// are a route rather than a tab. Pushing one also drops the badge problem:
   /// a tab you can see is a tab that has to say whether it has anything new.
-  void _openNotifications() {
+  Future<void> _openNotifications() async {
     final l = L10n.of(context);
-    Navigator.of(context).push(
+    // Seen on opening, not on closing: the list is on screen from this moment,
+    // and a badge still showing while its content is being read is noise.
+    // Stamped from the clock rather than from the newest item, so anything
+    // that arrives while the list is open still counts as new afterwards.
+    unawaited(widget.preferences
+        .markNotificationsSeen(DateTime.now().millisecondsSinceEpoch));
+    if (mounted) setState(() => _unread = 0);
+
+    await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => Scaffold(
           appBar: AppBar(
@@ -90,12 +144,13 @@ class _HomeShellState extends State<HomeShell> {
           body: SafeArea(
             child: NotificationsScreen(
               nexus: widget.nexus,
-              pubky: widget.session.pubky,
+              session: widget.session,
             ),
           ),
         ),
       ),
     );
+    unawaited(_countUnread());
   }
 
   Future<void> _openIssue(String template) => launchUrl(
@@ -120,7 +175,13 @@ class _HomeShellState extends State<HomeShell> {
         actions: [
           IconButton(
             onPressed: _openNotifications,
-            icon: const Icon(Icons.notifications_none_rounded),
+            icon: Badge.count(
+              count: _unread,
+              isLabelVisible: _unread > 0,
+              backgroundColor: kAccent,
+              textColor: const Color(0xFF04120E),
+              child: const Icon(Icons.notifications_none_rounded),
+            ),
             tooltip: l.titleNotifications,
           ),
           IconButton(

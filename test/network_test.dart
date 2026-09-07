@@ -2,6 +2,8 @@
 // (`flutter test test/pubky_test.dart`) stays deterministic.
 //
 //   flutter test test/network_test.dart
+import 'package:flutky/pubky/blake3.dart';
+import 'package:flutky/pubky/crockford.dart';
 import 'package:flutky/pubky/mentions.dart';
 import 'package:flutky/pubky/nexus.dart';
 import 'package:flutky/pubky/translation.dart';
@@ -286,4 +288,24 @@ void main() {
       );
     }, timeout: const Timeout(Duration(seconds: 60)));
   });
+
+  test('a blob published by another client hashes to its own id', () async {
+    // The third witness, and the only one that proves the whole chain against
+    // the live network: official vectors prove BLAKE3, the specs vector proves
+    // the Crockford half — this proves that what pubky.app actually wrote
+    // agrees with both. An image uploaded under a wrong id is accepted by the
+    // homeserver and then ignored by the indexer, in silence.
+    const author = 'w3ase343kdnbtp4y3x69qd1qyt8peyrdtkhf671ujucc9i8fge6y';
+    const blobId = 'CHAQT8HKR62Z7898R7TPEBHWBM';
+
+    final res = await http.get(Uri.parse(
+      'https://homeserver.pubky.app/pub/pubky.app/blobs/$blobId'
+      '?pubky-host=$author',
+    ));
+    expect(res.statusCode, 200);
+    expect(res.bodyBytes.length, greaterThan(1000));
+
+    final hash = blake3(res.bodyBytes);
+    expect(crockfordBytes(hash.sublist(0, hash.length ~/ 2)), blobId);
+  }, timeout: const Timeout(Duration(seconds: 90)));
 }

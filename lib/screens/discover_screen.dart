@@ -8,6 +8,7 @@ import '../pubky/nexus.dart';
 import '../pubky/ring_session.dart';
 import '../theme.dart';
 import 'post_card.dart';
+import 'post_screen.dart';
 import 'profile_sheet.dart';
 
 /// Public discovery: what the network is talking about, for someone who
@@ -238,6 +239,17 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                   quoted: quoted,
                   quotedAuthor:
                       quoted == null ? null : _profiles[quoted.author],
+                  onOpen: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => PostScreen(
+                        nexus: widget.nexus,
+                        session: widget.session,
+                        author: post.author,
+                        postId: post.id,
+                        known: post,
+                      ),
+                    ),
+                  ),
                 );
               },
             ),

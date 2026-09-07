@@ -297,7 +297,6 @@
   "composeTranslating": "Translating…",
   "composeTranslateFailed": "Translation failed: {error}",
   "composeTranslateUndo": "Undo",
-  "composeTranslateDone": "Translated — tap Undo to get your text back",
   "composeTranslateNothing": "Nothing to translate yet",
   "tabMessages": "Messages",
   "titleMessages": "Messages",
@@ -348,5 +347,21 @@
       }
     }
   },
-  "composeTranslateNoKey": "Translation needs a DeepL key. Add one in Settings — the free plan covers 500,000 characters a month."
+  "composeTranslateNoKey": "Translation needs a DeepL key. Add one in Settings — the free plan covers 500,000 characters a month.",
+  "postTitle": "Post",
+  "postLoading": "Loading…",
+  "postGone": "This post is not in the index — it may have been deleted.",
+  "postInReplyTo": "IN REPLY TO",
+  "postNoReplies": "NO REPLIES YET",
+  "postReplies": "{count, plural, =1{1 REPLY} other{{count} REPLIES}}",
+  "@postReplies": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "composeImage": "Picture",
+  "composeImageRemove": "Remove the picture",
+  "composeUploading": "Sending the picture…"
 }

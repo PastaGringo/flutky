@@ -71,8 +71,9 @@ Nothing is typed, copied or pasted — the two apps talk over Android deep links
 | ✅ | Renders `@mentions`, tap one to open that person's profile |
 | ✅ | **Discover**: popular posts, the labels in use, accounts to follow |
 | ✅ | Translates a draft before you post it, with your own DeepL key |
-| ✅ | Publishes short posts to your homeserver |
-| ❌ | Cannot yet follow, tag, reply, or attach an image |
+| ✅ | Publishes posts, with a picture if you want one |
+| ✅ | Opens a post to read its replies and the labels people put on it |
+| ❌ | Cannot yet tag, bookmark or reply |
 | ❌ | Cannot delete a post from the interface |
 
 **Posts are real.** Anything you publish lands on your homeserver and shows up

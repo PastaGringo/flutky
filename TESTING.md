@@ -2,6 +2,52 @@
 
 ## À tester (récents en haut)
 
+### feat: images dans un post, fil de discussion, pastille — v0.14.0 — 2026-09-08
+
+- [ ] **Où** : fenêtre d'écriture, bouton *Image*
+  - **Étape** : choisir une photo, vérifier l'aperçu, puis publier
+  - **Attendu** : une barre de progression pendant l'envoi, puis le post
+    apparaît. Quelques secondes plus tard l'image s'affiche dans la carte.
+    ⚠️ Chemin non éprouvé de mon côté : je ne peux pas publier depuis ton
+    compte. C'est le test le plus important de cette version.
+
+- [ ] **Où** : même fenêtre
+  - **Étape** : choisir une image **sans écrire de texte**, publier
+  - **Attendu** : le bouton Publier est actif — une image est un contenu.
+
+- [ ] **Où** : le post publié avec image, sur pubky.app
+  - **Étape** : ouvrir le post depuis un navigateur
+  - **Attendu** : l'image s'affiche là aussi. C'est ce qui prouve que
+    l'identifiant du blob a été calculé juste — un mauvais identifiant est
+    accepté par le homeserver et **ignoré en silence** par l'indexeur.
+
+- [ ] **Où** : flux, sur n'importe quelle carte
+  - **Étape** : toucher la carte (pas un lien ni une mention)
+  - **Attendu** : l'écran du post s'ouvre, avec les **libellés en toutes
+    lettres** et les réponses. Sur ton post mentionnant Jeb : 5 libellés et
+    1 réponse.
+
+- [ ] **Où** : même carte
+  - **Étape** : toucher une **mention** ou un **lien** dans le texte
+  - **Attendu** : la fiche du profil, ou le navigateur — pas l'écran du post.
+    C'est le témoin que le clic de la carte ne vole pas les autres.
+
+- [ ] **Où** : barre du haut
+  - **Étape** : attendre une notification, regarder la cloche
+  - **Attendu** : une pastille chiffrée. Elle disparaît dès l'ouverture de la
+    liste. ⚠️ Le décompte est **local à l'appareil** : Nexus n'a aucune
+    notion de lu/non-lu.
+
+- [ ] **Où** : liste des notifications
+  - **Étape** : toucher une notification qui concerne un post
+  - **Attendu** : le post s'ouvre. Celles sans post (un abonnement, par
+    exemple) restent inertes et gardent leur icône.
+
+- [ ] **Où** : juste après avoir publié
+  - **Étape** : laisser la carte « en attente d'indexation » sans rien toucher
+  - **Attendu** : elle se remplace toute seule en quelques secondes par le
+    vrai post, avec sa date, ses compteurs et son image.
+
 ### fix: la traduction passe à DeepL — v0.13.0 — 2026-09-07
 
 ML Kit est retiré : il échouait sur téléphone réel
@@ -27,8 +73,7 @@ ML Kit est retiré : il échouait sur téléphone réel
   - **Étape** : écrire une phrase contenant `@Jeb`, toucher *Traduire*,
     laisser *Détecter automatiquement* en source
   - **Attendu** : le texte est traduit et `@Jeb` est **inchangé**.
-    ⚠️ Chemin non éprouvé de mon côté : je n'ai pas de clé DeepL. C'est le
-    test qui compte le plus dans cette version.
+    ✅ Validé le 2026-09-08 : « j'ai fait deepl ça marche nickel ».
 
 ### feat: découverte publique, notifications en haut, @Nom — v0.12.0 — 2026-09-07
 

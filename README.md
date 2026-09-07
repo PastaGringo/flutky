@@ -33,16 +33,17 @@ and building for iOS needs macOS.
 | ✅ | Optionally folding your own posts into the Following feed |
 | ✅ | **Discover**: what the network tags most, ranked by engagement, plus accounts to follow |
 | ✅ | Translating a draft before posting, with your own DeepL key — mentions and links left intact |
+| ✅ | **Attaching a picture** to a post — BLAKE3 blob id computed in Dart |
+| ✅ | Opening a post: its labels in full, and its replies |
+| ✅ | An unread count on the notifications icon |
 | ✅ | Built-in diagnostics for the authentication path |
 
 ### Not there yet
 
 | | |
 |---|---|
-| ❌ | Tagging, bookmarking, replying — the tag id needs Blake3, not yet ported |
-| ❌ | Attaching an image to a post (needs binary upload) |
+| ❌ | Tagging, bookmarking, replying — the ids are within reach now that BLAKE3 is in Dart |
 | ❌ | Deleting or editing your own posts |
-| ❌ | Opening a post to read its replies |
 | ❌ | Search |
 | ❌ | Push notifications (the tab polls; there is no background delivery) |
 | ❌ | Choosing your own homeserver — `homeserver.pubky.app` is assumed |
@@ -101,6 +102,31 @@ not exist all answer **403** to a bad key. DeepL authenticates before routing,
 exactly like the Pubky homeserver — so a 403 proves nothing about whether a
 path exists.
 
+## BLAKE3, written out rather than depended on
+
+A blob is addressed by the Crockford base32 of the **first half** of the
+BLAKE3 hash of its bytes — the id is not a name a client gets to choose. Both
+Dart packages offering BLAKE3 are FFI bindings, and this project has already
+lost that bet once: ML Kit answered `MissingPluginException` on a signed
+release where the plugin was demonstrably packaged. So it is two hundred lines
+of pure Dart in [`blake3.dart`](lib/pubky/blake3.dart), which cannot fail to
+register.
+
+It is proven against three independent sources, because a hash that agrees
+only with itself is a hash nobody else can read:
+
+1. the fourteen official BLAKE3 vectors, **fetched** from the reference
+   repository (the first version of that list was written from memory, and
+   three entries were wrong — sending me to look for a bug in correct code);
+2. pubky-app-specs' own test: `PubkyAppBlob(vec![1, 2])` →
+   `PZBQ010FF079VVZPQG1RNFN6DR`;
+3. a blob published by another client, downloaded and re-hashed against the
+   id it is stored under.
+
+Note for anyone reading the Rust: `blob.rs` comments say "Z-base32 alphabet"
+while the line beneath calls `Alphabet::Crockford`. The code is what the
+network agrees on, and an upper-case real id settles it.
+
 ## Three traps this codebase documents
 
 **The exported secret is not the cookie value.** `export_secret()` in the Pubky
@@ -139,9 +165,10 @@ lib/
     homeserver.dart            writing
     diagnostics.dart           authentication probes
     translation.dart           DeepL, protecting mentions and links
-  screens/                     connect, feed, discover, notifications,
+    blake3.dart                BLAKE3 in Dart, for blob ids
+  screens/                     connect, feed, discover, post, notifications,
                                profile, compose, diagnostics, settings
-test/                          86 tests, offline and against the live network
+test/                          106 tests, offline and against the live network
   fixtures/                    untouched Nexus responses
 ```
 

@@ -991,12 +991,6 @@ abstract class L10n {
   /// **'Undo'**
   String get composeTranslateUndo;
 
-  /// No description provided for @composeTranslateDone.
-  ///
-  /// In en, this message translates to:
-  /// **'Translated — tap Undo to get your text back'**
-  String get composeTranslateDone;
-
   /// No description provided for @composeTranslateNothing.
   ///
   /// In en, this message translates to:
@@ -1170,6 +1164,60 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Translation needs a DeepL key. Add one in Settings — the free plan covers 500,000 characters a month.'**
   String get composeTranslateNoKey;
+
+  /// No description provided for @postTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Post'**
+  String get postTitle;
+
+  /// No description provided for @postLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading…'**
+  String get postLoading;
+
+  /// No description provided for @postGone.
+  ///
+  /// In en, this message translates to:
+  /// **'This post is not in the index — it may have been deleted.'**
+  String get postGone;
+
+  /// No description provided for @postInReplyTo.
+  ///
+  /// In en, this message translates to:
+  /// **'IN REPLY TO'**
+  String get postInReplyTo;
+
+  /// No description provided for @postNoReplies.
+  ///
+  /// In en, this message translates to:
+  /// **'NO REPLIES YET'**
+  String get postNoReplies;
+
+  /// No description provided for @postReplies.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 REPLY} other{{count} REPLIES}}'**
+  String postReplies(int count);
+
+  /// No description provided for @composeImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Picture'**
+  String get composeImage;
+
+  /// No description provided for @composeImageRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove the picture'**
+  String get composeImageRemove;
+
+  /// No description provided for @composeUploading.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending the picture…'**
+  String get composeUploading;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

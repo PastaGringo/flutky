@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
+import 'blake3.dart';
 import 'cookie_auth.dart';
 import 'crockford.dart';
 import 'grant_auth.dart';
@@ -18,6 +20,10 @@ const homeserverBase = 'https://homeserver.pubky.app';
 /// Longest `short` post pubky-app-specs accepts. Enforced here so the refusal
 /// happens under the text field rather than as an opaque 4xx.
 const maxShortPostLength = 2000;
+
+/// What pubky-app-specs allows for one blob, and what the homeserver accepts
+/// in one request — the two happen to agree at 100 MB.
+const maxBlobBytes = 100 * 1024 * 1024;
 
 /// How the session authenticates writes. Which one applies is decided by the
 /// secret's own format, not by guesswork.
@@ -63,6 +69,9 @@ class HomeserverClient {
   final RingSession session;
   final http.Client _client;
   static const _timeout = Duration(seconds: 30);
+
+  /// Longer, because this one carries megabytes over a phone connection.
+  static const _uploadTimeout = Duration(minutes: 3);
 
   BearerToken? _bearer;
 
@@ -137,9 +146,20 @@ class HomeserverClient {
   ///
   /// Optional fields are omitted rather than sent as null — that is the shape
   /// real pubky.app clients produce.
-  Future<String> createShortPost(String content) async {
+  /// Publishes a post, optionally carrying attachments.
+  ///
+  /// `kind` follows what is attached: pubky-app writes `image` for a post with
+  /// a picture and `short` otherwise. Measured on a real post rather than
+  /// guessed, along with the shape of the record — optional fields are
+  /// **omitted**, never written as null.
+  Future<String> createShortPost(
+    String content, {
+    List<String> attachments = const [],
+  }) async {
     final trimmed = content.trim();
-    if (trimmed.isEmpty) {
+    // A picture is content: only a post with neither text nor attachment is
+    // empty.
+    if (trimmed.isEmpty && attachments.isEmpty) {
       throw ArgumentError('Un post vide ne peut pas être publié.');
     }
     if (trimmed.length > maxShortPostLength) {
@@ -157,7 +177,11 @@ class HomeserverClient {
             ...await _authHeaders(),
             'Content-Type': 'application/json',
           },
-          body: utf8.encode(jsonEncode({'content': trimmed, 'kind': 'short'})),
+          body: utf8.encode(jsonEncode({
+            'content': trimmed,
+            'kind': attachments.isEmpty ? 'short' : 'image',
+            if (attachments.isNotEmpty) 'attachments': attachments,
+          })),
         )
         .timeout(_timeout);
 
@@ -168,6 +192,80 @@ class HomeserverClient {
       throw WriteFailed(res.statusCode, _shorten(res.body));
     }
     return id;
+  }
+
+  /// Uploads the bytes of a picture, and returns the `pubky://` URI to attach.
+  ///
+  /// Three writes, in an order that matters. The blob comes first, because its
+  /// **id is its content**: `Crockford(BLAKE3(bytes)[..16])`, not a name we
+  /// choose. Then the file record that describes it. Then the post that points
+  /// at the file. Any earlier order would publish a record pointing at
+  /// something that does not exist yet.
+  ///
+  /// A wrong blob id does not fail: the homeserver stores the bytes happily
+  /// and the indexer ignores the post, in silence. Hence the hash being tested
+  /// against the official vectors, against pubky-app-specs' own vector, and
+  /// against a blob published by another client.
+  Future<String> uploadImage(
+    Uint8List bytes, {
+    required String name,
+    required String contentType,
+  }) async {
+    if (bytes.isEmpty) {
+      throw ArgumentError('Une image vide ne peut pas être envoyée.');
+    }
+    if (bytes.length > maxBlobBytes) {
+      throw ArgumentError(
+        'Image trop lourde : ${bytes.length ~/ (1024 * 1024)} Mo pour un '
+        'maximum de ${maxBlobBytes ~/ (1024 * 1024)} Mo.',
+      );
+    }
+
+    final hash = blake3(bytes);
+    final blobId = crockfordBytes(hash.sublist(0, hash.length ~/ 2));
+    await _put(
+      '/pub/pubky.app/blobs/$blobId',
+      bytes,
+      contentType: 'application/octet-stream',
+    );
+
+    final fileId = newCrockfordId();
+    final record = <String, dynamic>{
+      'content_type': contentType,
+      'created_at': DateTime.now().toUtc().microsecondsSinceEpoch,
+      'name': name,
+      'size': bytes.length,
+      'src': 'pubky://${session.pubky}/pub/pubky.app/blobs/$blobId',
+    };
+    await _put(
+      '/pub/pubky.app/files/$fileId',
+      utf8.encode(jsonEncode(record)),
+      contentType: 'application/json',
+    );
+
+    return 'pubky://${session.pubky}/pub/pubky.app/files/$fileId';
+  }
+
+  /// One authenticated write, with the refusals told apart.
+  Future<void> _put(
+    String path,
+    List<int> body, {
+    required String contentType,
+  }) async {
+    final res = await _client
+        .put(
+          _entry(path),
+          headers: {...await _authHeaders(), 'Content-Type': contentType},
+          body: body,
+        )
+        .timeout(_uploadTimeout);
+
+    if (res.statusCode == 401 || res.statusCode == 403) {
+      throw WriteUnauthorized(res.statusCode, _shorten(res.body), authKind);
+    }
+    if (res.statusCode != 200 && res.statusCode != 201) {
+      throw WriteFailed(res.statusCode, _shorten(res.body));
+    }
   }
 
   /// Follows an account.

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../pubky/nexus.dart';
+import '../pubky/ring_session.dart';
 import '../theme.dart';
+import 'post_screen.dart';
 import 'profile_sheet.dart';
 
 /// Notifications, read from `GET /v0/user/{id}/notifications`.
@@ -15,11 +17,11 @@ class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({
     super.key,
     required this.nexus,
-    required this.pubky,
+    required this.session,
   });
 
   final NexusClient nexus;
-  final String pubky;
+  final RingSession session;
 
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
@@ -43,7 +45,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       _error = null;
     });
     try {
-      final items = await widget.nexus.fetchNotifications(pubky: widget.pubky);
+      final items =
+          await widget.nexus.fetchNotifications(pubky: widget.session.pubky);
 
       // Resolve the people involved in one batch, so each line can show a name
       // instead of a 52-character key.
@@ -120,6 +123,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 item: item,
                 actor: item.actor == null ? null : _actors[item.actor],
                 nexus: widget.nexus,
+                session: widget.session,
               ),
             ),
         ],
@@ -133,11 +137,13 @@ class _NotificationTile extends StatelessWidget {
     required this.item,
     required this.actor,
     required this.nexus,
+    required this.session,
   });
 
   final PubkyNotification item;
   final PubkyProfile? actor;
   final NexusClient nexus;
+  final RingSession session;
 
   @override
   Widget build(BuildContext context) {
@@ -145,7 +151,8 @@ class _NotificationTile extends StatelessWidget {
     final who = _who(l);
     final key = item.actor;
 
-    return Panel(
+    final uri = item.postUri;
+    final tile = Panel(
       padding: const EdgeInsets.all(14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,9 +195,27 @@ class _NotificationTile extends StatelessWidget {
               ],
             ),
           ),
-          Icon(_icon, size: 16, color: kTextMuted),
+          Icon(
+            uri == null ? _icon : Icons.chevron_right_rounded,
+            size: uri == null ? 16 : 20,
+            color: kTextMuted,
+          ),
         ],
       ),
+    );
+
+    // A notification about a post that we cannot open stays a plain tile:
+    // offering a tap that leads nowhere is worse than not offering one.
+    if (uri == null) return tile;
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => PostScreen.openUri(
+        context,
+        nexus: nexus,
+        session: session,
+        uri: uri,
+      ),
+      child: tile,
     );
   }
 
