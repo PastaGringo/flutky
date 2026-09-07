@@ -2,6 +2,39 @@
 
 ## À tester (récents en haut)
 
+### feat: page de diagnostic interne — v0.6.0 — 2026-09-07
+
+APK : `fr.delvops.flutky` · versionCode **6** · signé avec la clé de débogage.
+
+La v0.5.0 affichait « cookie · écriture ouverte » alors que l'écriture était
+refusée : pour une session cookie, ma vérification ne faisait **aucun appel
+réseau**, elle se contentait de construire l'en-tête. C'était un faux positif,
+il est corrigé — le cookie est maintenant présenté à `GET /session`.
+
+Le diagnostic s'ouvre par l'icône microscope, en haut de l'écran.
+
+- [ ] **Où** : icône microscope → page Diagnostic
+  - **Étape** : laisser les sondes tourner, puis **copier le rapport** avec
+    l'icône en haut à droite et me l'envoyer
+  - **Attendu** : c'est ce rapport qui tranche. La valeur du secret n'y figure
+    jamais, seulement sa longueur et sa forme.
+
+- [ ] **Où** : page Diagnostic, première sonde « lecture publique existante »
+  - **Étape** : regarder son code
+  - **Attendu** : **200**. Un 404 voudrait dire que ton compte n'est pas sur
+    `homeserver.pubky.app` — et alors toutes mes écritures partaient depuis le
+    début à la mauvaise adresse.
+
+- [ ] **Où** : page Diagnostic, les quatre sondes « Session »
+  - **Étape** : repérer s'il y en a une en vert
+  - **Attendu** : une seule suffit. Celle qui passe désigne le bon format
+    d'authentification ; si toutes échouent, la session elle-même est en cause.
+
+- [ ] **Où** : feuille de composition
+  - **Étape** : l'ouvrir sans écrire
+  - **Attendu** : la pastille ne doit plus mentir. Si l'écriture est refusée,
+    elle passe au rouge **avant** que tu rédiges.
+
 ### feat: authentification grant — publication débloquée — v0.5.0 — 2026-09-07
 
 APK : `fr.delvops.flutky` · versionCode **5** · signé avec la clé de débogage.

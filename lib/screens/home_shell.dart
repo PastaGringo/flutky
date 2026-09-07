@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../pubky/nexus.dart';
 import '../pubky/ring_session.dart';
 import '../theme.dart';
+import 'diagnostics_screen.dart';
 import 'feed_screen.dart';
 import 'profile_screen.dart';
 
@@ -69,6 +70,15 @@ class _HomeShellState extends State<HomeShell> {
           backgroundColor: kBackground,
           title: Text(_titles[_tab]),
           actions: [
+            IconButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => DiagnosticsScreen(session: widget.session),
+                ),
+              ),
+              icon: const Icon(Icons.biotech_rounded),
+              tooltip: 'Diagnostic',
+            ),
             IconButton(
               onPressed: _confirmDisconnect,
               icon: const Icon(Icons.logout_rounded),

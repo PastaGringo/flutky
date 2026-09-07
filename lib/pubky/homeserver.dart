@@ -104,10 +104,27 @@ class HomeserverClient {
     return {'Authorization': 'Bearer ${fresh.token}'};
   }
 
-  /// Mints a token without writing anything — used to tell the user whether
-  /// publishing will work before they have typed a word.
+  /// Checks that the homeserver actually accepts our credentials, without
+  /// writing anything.
+  ///
+  /// A grant is proven by minting a bearer — the exchange either works or
+  /// throws. A cookie proves nothing locally, so it has to be presented to
+  /// `GET /session`: building the header is not a check, and treating it as
+  /// one reports "write open" on a session the server will refuse.
   Future<void> checkWriteAccess() async {
-    await _authHeaders();
+    final headers = await _authHeaders();
+    if (authKind == AuthKind.grant) return; // the exchange above is the proof
+
+    final res = await _client
+        .get(
+          Uri.parse('$homeserverBase/session?pubky-host=${session.pubky}'),
+          headers: headers,
+        )
+        .timeout(_timeout);
+
+    if (res.statusCode != 200) {
+      throw WriteUnauthorized(res.statusCode, _shorten(res.body), authKind);
+    }
   }
 
   /// Publishes a short post and returns its id.
