@@ -1,0 +1,54 @@
+name: Feature request
+description: Suggest something Flutky should be able to do
+title: "[feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Flutky is a proof of concept exploring what a Flutter client can do on
+        Pubky without any Rust. Requests that push that question further are
+        especially welcome.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What should it do
+      description: Describe the behaviour, not the implementation.
+      placeholder: |
+        I want to reply to a post from the feed, without leaving for pubky.app.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it matters
+      description: >
+        What you cannot do today because of its absence. This is what decides
+        priority — more than the size of the change.
+      placeholder: |
+        Reading a thread is possible, but any answer means switching apps and
+        losing my place.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Reading (feed, profiles, search)
+        - Writing (posts, replies, tags, follows)
+        - Sign-in and sessions
+        - Notifications
+        - Interface and language
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you do instead today
+      description: Optional — a workaround often says more than the request itself.

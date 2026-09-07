@@ -1,0 +1,409 @@
+import 'package:flutter/material.dart';
+
+import '../l10n/app_localizations.dart';
+import '../pubky/nexus.dart';
+import '../theme.dart';
+import 'post_content.dart';
+import 'profile_sheet.dart';
+
+/// One post in the timeline.
+///
+/// A repost is an ordinary post pointing at another. With text of its own it
+/// reads as a quote — the quoted post goes in a framed block underneath; with
+/// no text, it is a plain share and the original takes the whole card, under a
+/// discreet "reposted" line.
+class PostCard extends StatelessWidget {
+  const PostCard({
+    super.key,
+    required this.post,
+    required this.nexus,
+    required this.profiles,
+    this.quoted,
+    this.quotedAuthor,
+    this.pending = false,
+  });
+
+  final PubkyPost post;
+  final NexusClient nexus;
+  final Map<String, PubkyProfile> profiles;
+
+  /// The post this one reposts or replies to, once loaded.
+  final PubkyPost? quoted;
+  final PubkyProfile? quotedAuthor;
+
+  /// Published from this device and not yet visible through the indexer.
+  final bool pending;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = L10n.of(context);
+    final author = profiles[post.author];
+    final name = displayName(author, post.author, l);
+
+    return Panel(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (post.isRepost)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  const Icon(Icons.repeat_rounded, size: 14, color: kTextMuted),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Text(
+                      '$name ${l.postRepostedLabel}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: kTextMuted, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          _Header(
+            post: post,
+            author: author,
+            name: name,
+            nexus: nexus,
+            pending: pending,
+          ),
+          if (post.content.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            PostContent(
+              content: post.content,
+              nexus: nexus,
+              knownProfiles: profiles,
+            ),
+          ],
+          if (post.imageUrls().isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _Images(urls: post.imageUrls()),
+          ],
+          if (post.isRepost || post.isReply) ...[
+            const SizedBox(height: 12),
+            _QuotedBlock(
+              post: quoted,
+              author: quotedAuthor,
+              nexus: nexus,
+              profiles: profiles,
+            ),
+          ],
+          _Metrics(post: post),
+        ],
+      ),
+    );
+  }
+
+  /// Falls back to a shortened key rather than showing 52 characters, and to a
+  /// translated placeholder when even that is missing.
+  static String displayName(PubkyProfile? profile, String key, L10n l) {
+    final name = profile?.name;
+    if (name != null && name.isNotEmpty) return name;
+    if (key.length <= 12) return key.isEmpty ? l.profileNoName : key;
+    return '${key.substring(0, 6)}…${key.substring(key.length - 4)}';
+  }
+
+  static String relativeTime(L10n l, DateTime? d) {
+    if (d == null) return '';
+    final diff = DateTime.now().difference(d);
+    if (diff.inMinutes < 1) return l.timeJustNow;
+    if (diff.inMinutes < 60) return l.timeMinutes(diff.inMinutes);
+    if (diff.inHours < 24) return l.timeHours(diff.inHours);
+    if (diff.inDays < 30) return l.timeDays(diff.inDays);
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(d.day)}/${two(d.month)}/${d.year}';
+  }
+}
+
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.post,
+    required this.author,
+    required this.name,
+    required this.nexus,
+    required this.pending,
+  });
+
+  final PubkyPost post;
+  final PubkyProfile? author;
+  final String name;
+  final NexusClient nexus;
+  final bool pending;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = L10n.of(context);
+
+    return Row(
+      children: [
+        InkWell(
+          onTap: () => showProfileSheet(
+            context,
+            nexus: nexus,
+            pubky: post.author,
+            known: author,
+          ),
+          borderRadius: BorderRadius.circular(999),
+          child: ClipOval(
+            child: Image.network(
+              '$nexusBase/static/avatar/${post.author}',
+              width: 36,
+              height: 36,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Container(
+                width: 36,
+                height: 36,
+                color: kBackground,
+                alignment: Alignment.center,
+                child: Text(
+                  name.characters.first.toUpperCase(),
+                  style: const TextStyle(
+                    color: kAccent,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14.5,
+                ),
+              ),
+              Text(
+                pending
+                    ? l.postPending
+                    : PostCard.relativeTime(l, post.indexedAt),
+                style: TextStyle(
+                  color: pending ? kAccent : kTextMuted,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (post.kind != 'short' && post.kind != 'unknown')
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: kBackground,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: kBorder),
+            ),
+            child: Text(
+              post.kind,
+              style: const TextStyle(color: kTextMuted, fontSize: 11),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// The quoted or replied-to post, framed so it cannot be mistaken for the
+/// author's own words.
+class _QuotedBlock extends StatelessWidget {
+  const _QuotedBlock({
+    required this.post,
+    required this.author,
+    required this.nexus,
+    required this.profiles,
+  });
+
+  final PubkyPost? post;
+  final PubkyProfile? author;
+  final NexusClient nexus;
+  final Map<String, PubkyProfile> profiles;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = L10n.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: kBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: kBorder),
+      ),
+      child: post == null
+          ? Text(
+              l.postQuotedUnavailable,
+              style: const TextStyle(color: kTextMuted, fontSize: 12.5),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    ClipOval(
+                      child: Image.network(
+                        '$nexusBase/static/avatar/${post!.author}',
+                        width: 22,
+                        height: 22,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => const Icon(
+                          Icons.person_rounded,
+                          size: 18,
+                          color: kTextMuted,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        PostCard.displayName(author, post!.author, l),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      PostCard.relativeTime(l, post!.indexedAt),
+                      style: const TextStyle(color: kTextMuted, fontSize: 11),
+                    ),
+                  ],
+                ),
+                if (post!.content.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  PostContent(
+                    content: post!.content,
+                    nexus: nexus,
+                    knownProfiles: profiles,
+                  ),
+                ],
+                if (post!.imageUrls().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _Images(urls: post!.imageUrls(), height: 130),
+                ],
+              ],
+            ),
+    );
+  }
+}
+
+class _Images extends StatelessWidget {
+  const _Images({required this.urls, this.height = 190});
+
+  final List<String> urls;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: urls.length == 1
+            ? _Thumb(url: urls.first, height: height)
+            : SizedBox(
+                height: height * 0.7,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: urls.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (_, i) => ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: SizedBox(
+                      width: 170,
+                      child: _Thumb(url: urls[i], height: height * 0.7),
+                    ),
+                  ),
+                ),
+              ),
+      );
+}
+
+class _Thumb extends StatelessWidget {
+  const _Thumb({required this.url, required this.height});
+
+  final String url;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) => Image.network(
+        url,
+        height: height,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => Container(
+          height: height,
+          color: kBackground,
+          alignment: Alignment.center,
+          child: const Icon(Icons.broken_image_outlined, color: kTextMuted),
+        ),
+        loadingBuilder: (context, child, progress) => progress == null
+            ? child
+            : Container(
+                height: height,
+                color: kBackground,
+                alignment: Alignment.center,
+                child: const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+      );
+}
+
+class _Metrics extends StatelessWidget {
+  const _Metrics({required this.post});
+
+  final PubkyPost post;
+
+  @override
+  Widget build(BuildContext context) {
+    final replies = post.counts['replies'] ?? 0;
+    final reposts = post.counts['reposts'] ?? 0;
+    final tags = post.counts['tags'] ?? 0;
+    if (replies + reposts + tags == 0) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Row(
+        children: [
+          if (replies > 0) _Metric(Icons.mode_comment_outlined, replies),
+          if (reposts > 0) _Metric(Icons.repeat_rounded, reposts),
+          if (tags > 0) _Metric(Icons.sell_outlined, tags),
+        ],
+      ),
+    );
+  }
+}
+
+class _Metric extends StatelessWidget {
+  const _Metric(this.icon, this.value);
+
+  final IconData icon;
+  final int value;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(right: 18),
+        child: Row(
+          children: [
+            Icon(icon, size: 15, color: kTextMuted),
+            const SizedBox(width: 5),
+            Text(
+              '$value',
+              style: const TextStyle(color: kTextMuted, fontSize: 12.5),
+            ),
+          ],
+        ),
+      );
+}

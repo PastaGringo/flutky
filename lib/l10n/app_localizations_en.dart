@@ -1,0 +1,466 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for English (`en`).
+class L10nEn extends L10n {
+  L10nEn([String locale = 'en']) : super(locale);
+
+  @override
+  String get appTitle => 'Flutky';
+
+  @override
+  String get connectTagline =>
+      'Proof of concept: sign in with your Pubky account through Pubky Ring, then see your profile.';
+
+  @override
+  String get connectButton => 'Sign in with Pubky Ring';
+
+  @override
+  String get connectAltLink => 'Try the other link format (session/)';
+
+  @override
+  String get connectLoadingProfile => 'Reading your profile from Nexus…';
+
+  @override
+  String get connectSessionReceived => 'Session received. Loading…';
+
+  @override
+  String get connectRetryProfile => 'Retry loading the profile';
+
+  @override
+  String get howItWorksTitle => 'What is about to happen';
+
+  @override
+  String get howItWorksStep1 =>
+      'Flutky opens Pubky Ring through a pubkyring://session link.';
+
+  @override
+  String get howItWorksStep2 =>
+      'Ring asks which pubky to use, then shows an approval screen.';
+
+  @override
+  String get howItWorksStep3 =>
+      'Ring reopens Flutky, handing it your public key and a session secret.';
+
+  @override
+  String get howItWorksStep4 =>
+      'Flutky reads your profile from Nexus, without authentication.';
+
+  @override
+  String get howItWorksSecret =>
+      'The session secret stays on the device. It is never displayed nor logged.';
+
+  @override
+  String get exchangeTitle => 'EXCHANGE WITH RING';
+
+  @override
+  String get exchangeSent => 'SENT';
+
+  @override
+  String get exchangeReceived => 'RECEIVED';
+
+  @override
+  String get exchangeNothingYet => 'Nothing received from Ring yet.';
+
+  @override
+  String get exchangeCopied => 'Exchange copied';
+
+  @override
+  String errorLinkUnreadable(Object error) {
+    return 'Unreadable incoming link: $error';
+  }
+
+  @override
+  String errorRingRefused(Object code, Object message) {
+    return 'Ring refused ($code): $message';
+  }
+
+  @override
+  String get errorRingCancelled => 'Sign-in cancelled in Pubky Ring.';
+
+  @override
+  String get errorRingEmpty =>
+      'Ring did come back to Flutky, but without a public key or session secret. That is the signature of a link handled by something other than the session flow. The full detail is below.';
+
+  @override
+  String get errorRingUnreachable =>
+      'No app answered. Is Pubky Ring installed on this phone?';
+
+  @override
+  String errorRingOpenFailed(Object error) {
+    return 'Could not open Pubky Ring: $error';
+  }
+
+  @override
+  String get errorNotIndexed =>
+      'Nexus does not know this key yet. The indexer only learns about an account once it is wired into the social graph: post something or follow someone from pubky.app, then try again.';
+
+  @override
+  String get tabFeed => 'Feed';
+
+  @override
+  String get tabProfile => 'Profile';
+
+  @override
+  String get tabNotifications => 'Notifications';
+
+  @override
+  String get titleFeed => 'Feed';
+
+  @override
+  String get titleProfile => 'My Pubky profile';
+
+  @override
+  String get titleNotifications => 'Notifications';
+
+  @override
+  String get titleDiagnostics => 'Diagnostics';
+
+  @override
+  String get actionRefresh => 'Refresh';
+
+  @override
+  String get actionSignOut => 'Sign out';
+
+  @override
+  String get actionDiagnostics => 'Diagnostics';
+
+  @override
+  String get actionReportBug => 'Report a bug';
+
+  @override
+  String get actionRequestFeature => 'Request a feature';
+
+  @override
+  String get actionCancel => 'Cancel';
+
+  @override
+  String get actionRetry => 'Retry';
+
+  @override
+  String get actionCopy => 'Copy';
+
+  @override
+  String get actionSettings => 'Settings';
+
+  @override
+  String get signOutTitle => 'Sign out?';
+
+  @override
+  String get signOutBody =>
+      'The stored session will be erased from this phone. You will have to go through Pubky Ring again to come back.';
+
+  @override
+  String get feedSourceFollowing => 'Following';
+
+  @override
+  String get feedSourceFriends => 'Friends';
+
+  @override
+  String get feedSourceAll => 'Global';
+
+  @override
+  String get feedSourceBookmarks => 'Bookmarks';
+
+  @override
+  String get feedEmptyFollowing =>
+      'Nothing to show. This feed only covers accounts you follow — pull down to refresh, or switch to Global.';
+
+  @override
+  String get feedEmptyOther => 'Nothing to show in this feed.';
+
+  @override
+  String get feedComposeTooltip => 'Write a post';
+
+  @override
+  String get feedPublished =>
+      'Published. The feed will show it once Nexus has indexed it.';
+
+  @override
+  String get postPending => 'posted just now · waiting to be indexed';
+
+  @override
+  String get postRepostedLabel => 'reposted';
+
+  @override
+  String get postQuotedUnavailable => 'Original post unavailable';
+
+  @override
+  String get postLoadingQuoted => 'Loading the original post…';
+
+  @override
+  String get postReplyingTo => 'replying to';
+
+  @override
+  String get timeJustNow => 'just now';
+
+  @override
+  String timeMinutes(int count) {
+    return '$count min ago';
+  }
+
+  @override
+  String timeHours(int count) {
+    return '$count h ago';
+  }
+
+  @override
+  String timeDays(int count) {
+    return '$count d ago';
+  }
+
+  @override
+  String get composeTitle => 'New post';
+
+  @override
+  String get composeHint => 'What\'s happening?';
+
+  @override
+  String composeCounter(int used, int max) {
+    return '$used / $max';
+  }
+
+  @override
+  String get composeTarget => 'Posted to your homeserver';
+
+  @override
+  String get composePublish => 'Publish';
+
+  @override
+  String get composeNote =>
+      'The post reaches your homeserver immediately. When it shows up in the feed depends on the indexer, which always lags a little.';
+
+  @override
+  String get composeAccessChecking => 'checking…';
+
+  @override
+  String composeAccessOpen(Object kind) {
+    return '$kind · writing allowed';
+  }
+
+  @override
+  String composeAccessDenied(Object kind) {
+    return '$kind · writing refused';
+  }
+
+  @override
+  String get composeEmpty => 'An empty post cannot be published.';
+
+  @override
+  String composeTooLong(int max, int used) {
+    return 'A short post is limited to $max characters ($used here).';
+  }
+
+  @override
+  String get composeWrittenButMissing =>
+      'written, but not found when read back';
+
+  @override
+  String get profileBio => 'Bio';
+
+  @override
+  String get profilePublicKey => 'Public key';
+
+  @override
+  String get profileActivity => 'Activity';
+
+  @override
+  String get profileLinks => 'Links';
+
+  @override
+  String get profileTags => 'Tags received';
+
+  @override
+  String get profileSession => 'Ring session';
+
+  @override
+  String get profileKeyCopied => 'Key copied';
+
+  @override
+  String get profileNoName => 'No name';
+
+  @override
+  String get profileSecretReceived => 'Secret received';
+
+  @override
+  String profileSecretLength(int count) {
+    return '$count characters (not shown)';
+  }
+
+  @override
+  String get profileCapabilities => 'Capabilities';
+
+  @override
+  String get profileNoCapabilities => 'none advertised';
+
+  @override
+  String get profileIndexedOn => 'Indexed on';
+
+  @override
+  String get profileSessionWarning =>
+      'The session secret is as good as a password: this proof of concept keeps it in the platform keystore and never shows it.';
+
+  @override
+  String get countPosts => 'Posts';
+
+  @override
+  String get countReplies => 'Replies';
+
+  @override
+  String get countFollowers => 'Followers';
+
+  @override
+  String get countFollowing => 'Following';
+
+  @override
+  String get countFriends => 'Friends';
+
+  @override
+  String get countTagged => 'Times tagged';
+
+  @override
+  String get countUniqueTags => 'Distinct tags';
+
+  @override
+  String get countBookmarks => 'Bookmarks';
+
+  @override
+  String get countCollections => 'Collections';
+
+  @override
+  String notifFollow(Object who) {
+    return '$who followed you';
+  }
+
+  @override
+  String notifNewFriend(Object who) {
+    return '$who follows you back — you are now friends';
+  }
+
+  @override
+  String notifLostFriend(Object who) {
+    return '$who unfollowed you';
+  }
+
+  @override
+  String notifTagPost(Object who, Object label) {
+    return '$who tagged your post “$label”';
+  }
+
+  @override
+  String notifTagProfile(Object who, Object label) {
+    return '$who tagged your profile “$label”';
+  }
+
+  @override
+  String notifUntagPost(Object who, Object label) {
+    return '$who removed the tag “$label” from your post';
+  }
+
+  @override
+  String notifUntagProfile(Object who, Object label) {
+    return '$who removed the tag “$label” from your profile';
+  }
+
+  @override
+  String notifReply(Object who) {
+    return '$who replied to your post';
+  }
+
+  @override
+  String notifRepost(Object who) {
+    return '$who reposted your post';
+  }
+
+  @override
+  String notifMention(Object who) {
+    return '$who mentioned you';
+  }
+
+  @override
+  String notifPostDeleted(Object who) {
+    return '$who deleted a post you were involved in';
+  }
+
+  @override
+  String notifPostEdited(Object who) {
+    return '$who edited a post you were involved in';
+  }
+
+  @override
+  String notifUnknown(Object type) {
+    return 'Notification of an unrecognised kind ($type)';
+  }
+
+  @override
+  String get notifEmpty =>
+      'No notifications. They arrive when someone follows you, tags you, replies to you or reposts you.';
+
+  @override
+  String get notifSomeone => 'Someone';
+
+  @override
+  String get diagSecretSection => 'SESSION SECRET';
+
+  @override
+  String get diagLength => 'Length';
+
+  @override
+  String get diagDetectedType => 'Detected type';
+
+  @override
+  String get diagShape => 'Shape';
+
+  @override
+  String get diagCookieValue => 'Cookie value';
+
+  @override
+  String get diagSegments => 'Segments (:)';
+
+  @override
+  String get diagNeverShown =>
+      'The secret itself is never displayed nor copied.';
+
+  @override
+  String get diagCopied => 'Diagnostics copied';
+
+  @override
+  String get diagCopyReport => 'Copy the report';
+
+  @override
+  String get diagRerun => 'Run again';
+
+  @override
+  String get diagFootnote =>
+      'The homeserver answers 401 even for a route that does not exist: authentication runs before routing. A lone 401 therefore proves nothing. The two controls at the top use no authentication at all — they are what give the others meaning: if they pass, the address and the network are fine, and a refusal below really is about the session.';
+
+  @override
+  String get diagFailed => 'failed';
+
+  @override
+  String get settingsLanguage => 'Language';
+
+  @override
+  String get settingsLanguageSystem => 'System';
+
+  @override
+  String get settingsLanguageFrench => 'Français';
+
+  @override
+  String get settingsLanguageEnglish => 'English';
+
+  @override
+  String get settingsAbout => 'About';
+
+  @override
+  String get settingsVersion => 'Version';
+
+  @override
+  String get settingsSourceCode => 'Source code';
+
+  @override
+  String get settingsLicense => 'MIT licence';
+}

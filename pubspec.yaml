@@ -1,7 +1,7 @@
 name: flutky
 description: "A new Flutter project."
 publish_to: 'none'
-version: 0.8.0+8
+version: 0.9.0+9
 
 environment:
   sdk: ^3.12.0
@@ -11,14 +11,21 @@ dependencies:
   cryptography: ^2.9.0
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   flutter_secure_storage: ^11.0.0
   http: ^1.6.0
+  intl: ^0.20.2
+  package_info_plus: ^10.2.1
+  shared_preferences: ^2.5.5
   url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
+  generate: true
   uses-material-design: true

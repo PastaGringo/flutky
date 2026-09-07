@@ -1,0 +1,68 @@
+name: Bug report
+description: Something does not work as it should
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. Flutky is a proof of concept, so rough
+        edges are expected — but a clear report still makes them fixable.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, and what the app did instead of what you expected.
+      placeholder: |
+        I tapped "Publier" and got a red error box saying …
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Shown in Obtainium, or in the app's About screen.
+      placeholder: "0.8.0"
+    validations:
+      required: true
+
+  - type: input
+    id: android
+    attributes:
+      label: Android version and device
+      placeholder: "Android 14, Pixel 7"
+    validations:
+      required: true
+
+  - type: input
+    id: ring
+    attributes:
+      label: Pubky Ring version
+      description: >
+        Ring → About. Leave blank if the problem has nothing to do with
+        signing in.
+      placeholder: "1.19"
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics report
+      description: >
+        Only for sign-in or publishing problems. Open the microscope icon at
+        the top of the app, tap the copy icon, and paste here. It never
+        contains your secret — only its length and shape.
+      render: text
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked that no existing issue reports the same thing
+          required: true
+        - label: >
+            The report above contains no private key, recovery phrase or
+            session secret
+          required: true

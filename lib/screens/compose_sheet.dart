@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 
 import '../pubky/grant_auth.dart';
 import '../pubky/homeserver.dart';
@@ -110,6 +111,7 @@ class _ComposeSheetState extends State<_ComposeSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l = L10n.of(context);
     final length = _controller.text.trim().length;
     final tooLong = length > maxShortPostLength;
     final err = _error;
@@ -127,7 +129,7 @@ class _ComposeSheetState extends State<_ComposeSheet> {
           Row(
             children: [
               Text(
-                'Nouveau post',
+                l.composeTitle,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 17),
               ),
               const Spacer(),
@@ -153,7 +155,7 @@ class _ComposeSheetState extends State<_ComposeSheet> {
             onChanged: (_) => setState(() {}),
             style: const TextStyle(fontSize: 15.5, height: 1.5),
             decoration: InputDecoration(
-              hintText: 'Quoi de neuf ?',
+              hintText: l.composeHint,
               hintStyle: const TextStyle(color: kTextMuted),
               filled: true,
               fillColor: kBackground,
@@ -175,16 +177,16 @@ class _ComposeSheetState extends State<_ComposeSheet> {
           Row(
             children: [
               Text(
-                '$length / $maxShortPostLength',
+                l.composeCounter(length, maxShortPostLength),
                 style: TextStyle(
                   fontSize: 12,
                   color: tooLong ? kDanger : kTextMuted,
                 ),
               ),
               const Spacer(),
-              const Text(
-                'Publié sur ton homeserver',
-                style: TextStyle(fontSize: 12, color: kTextMuted),
+              Text(
+                l.composeTarget,
+                style: const TextStyle(fontSize: 12, color: kTextMuted),
               ),
             ],
           ),
@@ -201,13 +203,12 @@ class _ComposeSheetState extends State<_ComposeSheet> {
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Publier'),
+                : Text(l.composePublish),
           ),
           const SizedBox(height: 10),
-          const Text(
-            'Le post part sur le homeserver tout de suite. Son apparition dans '
-            "le flux dépend de l'indexeur, qui a toujours un peu de retard.",
-            style: TextStyle(color: kTextMuted, fontSize: 12, height: 1.45),
+          Text(
+            l.composeNote,
+            style: const TextStyle(color: kTextMuted, fontSize: 12, height: 1.45),
           ),
         ],
       ),
@@ -226,10 +227,11 @@ class _AccessBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = L10n.of(context);
     final (label, color) = switch (canWrite) {
-      null => ('vérification…', kTextMuted),
-      true => ('${kind.label} · écriture ouverte', kAccent),
-      false => ('${kind.label} · écriture refusée', kDanger),
+      null => (l.composeAccessChecking, kTextMuted),
+      true => (l.composeAccessOpen(kind.label), kAccent),
+      false => (l.composeAccessDenied(kind.label), kDanger),
     };
 
     return Container(

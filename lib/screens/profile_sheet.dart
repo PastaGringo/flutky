@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../l10n/app_localizations.dart';
 
 import '../pubky/nexus.dart';
 import '../theme.dart';
@@ -55,7 +56,7 @@ class _ProfileSheetState extends State<_ProfileSheet> {
     } on ProfileNotIndexed {
       if (mounted && _profile == null) {
         setState(() => _error =
-            "Nexus ne connaît pas cette clé : le compte n'a jamais été indexé.");
+            L10n.of(context).errorNotIndexed);
       }
     } catch (e) {
       if (mounted && _profile == null) setState(() => _error = '$e');
@@ -115,7 +116,8 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                   color: kBackground,
                   alignment: Alignment.center,
                   child: Text(
-                    profile.name.characters.first.toUpperCase(),
+                    (profile.name.isEmpty ? '?' : profile.name)
+                        .characters.first.toUpperCase(),
                     style: const TextStyle(
                       color: kAccent,
                       fontSize: 22,
@@ -131,7 +133,9 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    profile.name,
+                    profile.name.isEmpty
+                        ? L10n.of(context).profileNoName
+                        : profile.name,
                     style: const TextStyle(
                       fontSize: 19,
                       fontWeight: FontWeight.w700,
@@ -159,11 +163,11 @@ class _ProfileSheetState extends State<_ProfileSheet> {
           spacing: 10,
           runSpacing: 10,
           children: [
-            for (final entry in const {
-              'posts': 'publications',
-              'followers': 'abonnés',
-              'following': 'abonnements',
-              'tagged': 'fois taggé',
+            for (final entry in {
+              'posts': L10n.of(context).countPosts,
+              'followers': L10n.of(context).countFollowers,
+              'following': L10n.of(context).countFollowing,
+              'tagged': L10n.of(context).countTagged,
             }.entries)
               if (profile.counts.containsKey(entry.key))
                 Container(
@@ -184,7 +188,7 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                           ),
                         ),
                         TextSpan(
-                          text: ' ${entry.value}',
+                          text: ' ${entry.value.toLowerCase()}',
                           style: const TextStyle(color: kTextMuted),
                         ),
                       ],
@@ -200,7 +204,7 @@ class _ProfileSheetState extends State<_ProfileSheet> {
             await Clipboard.setData(ClipboardData(text: profile.id));
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Clé copiée')),
+                SnackBar(content: Text(L10n.of(context).profileKeyCopied)),
               );
             }
           },

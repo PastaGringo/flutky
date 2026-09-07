@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../pubky/mentions.dart';
 import '../pubky/nexus.dart';
 import '../pubky/ring_session.dart';
 import '../theme.dart';
 import 'compose_sheet.dart';
-import 'post_content.dart';
-import 'profile_sheet.dart';
+import 'post_card.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key, required this.nexus, required this.session});
@@ -26,12 +26,15 @@ class _FeedScreenState extends State<FeedScreen> {
   final _scroll = ScrollController();
   final _posts = <PubkyPost>[];
 
-  /// Authors *and* mentioned accounts: a mention renders as a name only if its
-  /// profile is in here, so both are resolved in the same batch call.
+  /// Authors, mentioned accounts and quoted authors — a name only appears if
+  /// its profile is in here, so all three are resolved in the same batch.
   final _profiles = <String, PubkyProfile>{};
 
-  /// Posts published from this device, kept in front of the stream until the
-  /// indexer catches up.
+  /// Posts that others reposted or replied to, keyed by their `pubky://` URI.
+  final _quoted = <String, PubkyPost>{};
+
+  /// Published from this device, kept in front of the stream until the indexer
+  /// catches up.
   final _pending = <PubkyPost>[];
 
   FeedSource _source = FeedSource.following;
@@ -79,33 +82,59 @@ class _FeedScreenState extends State<FeedScreen> {
         skip: _posts.length,
       );
 
-      // Resolving names is a second call; a failure there must not lose the
-      // posts we already have — the timeline degrades to shortened keys.
-      Map<String, PubkyProfile> resolved = const {};
-      final unknown = <String>{
-        for (final post in page) ...{post.author, ...mentionedKeys(post.content)},
-      }..removeWhere((k) => k.isEmpty || _profiles.containsKey(k));
-
-      if (unknown.isNotEmpty) {
-        try {
-          resolved = await widget.nexus.fetchUsersByIds(unknown);
-        } catch (_) {
-          resolved = const {};
-        }
-      }
-
       if (!mounted) return;
       setState(() {
         _posts.addAll(page);
-        _profiles.addAll(resolved);
         _exhausted = page.length < _pageSize;
         _error = null;
       });
+
+      // Names and quoted posts load after the page is on screen: a failure
+      // there degrades the cards, it does not cost us the timeline.
+      unawaited(_resolve(page));
     } catch (e) {
       if (mounted) setState(() => _error = '$e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  /// Fetches the quoted posts, then every profile involved — authors,
+  /// mentions, and the authors of the quoted posts — in a single batch call.
+  Future<void> _resolve(List<PubkyPost> page) async {
+    final quotedUris = page
+        .map((p) => p.repostedUri ?? p.repliedUri)
+        .whereType<String>()
+        .where((uri) => !_quoted.containsKey(uri))
+        .toSet();
+
+    final fetched = <String, PubkyPost>{};
+    for (final uri in quotedUris) {
+      final parts = PubkyPost.parsePostUri(uri);
+      if (parts == null) continue;
+      final post = await widget.nexus.fetchPost(parts.author, parts.id);
+      if (post != null) fetched[uri] = post;
+    }
+
+    final keys = <String>{
+      for (final p in page) ...{p.author, ...mentionedKeys(p.content)},
+      for (final p in fetched.values) ...{p.author, ...mentionedKeys(p.content)},
+    }..removeWhere((k) => k.isEmpty || _profiles.containsKey(k));
+
+    Map<String, PubkyProfile> resolved = const {};
+    if (keys.isNotEmpty) {
+      try {
+        resolved = await widget.nexus.fetchUsersByIds(keys);
+      } catch (_) {
+        resolved = const {};
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _quoted.addAll(fetched);
+      _profiles.addAll(resolved);
+    });
   }
 
   void _switchSource(FeedSource source) {
@@ -118,8 +147,6 @@ class _FeedScreenState extends State<FeedScreen> {
     final published = await showComposeSheet(context, session: widget.session);
     if (published == null || !mounted) return;
 
-    // Optimistic: the post is on the homeserver — the sheet read it back — but
-    // Nexus has not seen it yet, so the stream cannot show it.
     setState(() {
       _pending.insert(
         0,
@@ -137,9 +164,7 @@ class _FeedScreenState extends State<FeedScreen> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Publié. Le flux le montrera dès que Nexus aura indexé.'),
-      ),
+      SnackBar(content: Text(L10n.of(context).feedPublished)),
     );
 
     // Nudge the indexer. Best effort: the post exists on the homeserver either
@@ -149,9 +174,9 @@ class _FeedScreenState extends State<FeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final err = _error;
+    final l = L10n.of(context);
     final all = [..._pending, ..._posts];
-    final empty = all.isEmpty && !_loading && err == null;
+    final empty = all.isEmpty && !_loading && _error == null;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -159,16 +184,16 @@ class _FeedScreenState extends State<FeedScreen> {
         onPressed: _compose,
         backgroundColor: kAccent,
         foregroundColor: const Color(0xFF04120E),
-        tooltip: 'Écrire un post',
+        tooltip: l.feedComposeTooltip,
         child: const Icon(Icons.edit_rounded),
       ),
       body: Column(
         children: [
           _SourceBar(current: _source, onPick: _switchSource),
-          if (err != null)
+          if (_error != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-              child: ErrorPanel(message: err),
+              child: ErrorPanel(message: _error!),
             ),
           Expanded(
             child: RefreshIndicator(
@@ -194,10 +219,16 @@ class _FeedScreenState extends State<FeedScreen> {
                           );
                         }
                         final post = all[i];
+                        final quotedUri = post.repostedUri ?? post.repliedUri;
+                        final quoted =
+                            quotedUri == null ? null : _quoted[quotedUri];
                         return PostCard(
                           post: post,
                           nexus: widget.nexus,
                           profiles: _profiles,
+                          quoted: quoted,
+                          quotedAuthor:
+                              quoted == null ? null : _profiles[quoted.author],
                           pending: i < _pending.length,
                         );
                       },
@@ -216,25 +247,35 @@ class _SourceBar extends StatelessWidget {
   final FeedSource current;
   final void Function(FeedSource) onPick;
 
+  static String label(L10n l, FeedSource source) => switch (source) {
+        FeedSource.following => l.feedSourceFollowing,
+        FeedSource.friends => l.feedSourceFriends,
+        FeedSource.all => l.feedSourceAll,
+        FeedSource.bookmarks => l.feedSourceBookmarks,
+      };
+
   @override
-  Widget build(BuildContext context) => SizedBox(
-        height: 52,
-        child: ListView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          children: [
-            for (final source in FeedSource.values)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: _Chip(
-                  label: source.label,
-                  selected: source == current,
-                  onTap: () => onPick(source),
-                ),
+  Widget build(BuildContext context) {
+    final l = L10n.of(context);
+    return SizedBox(
+      height: 52,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        children: [
+          for (final source in FeedSource.values)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: _Chip(
+                label: label(l, source),
+                selected: source == current,
+                onTap: () => onPick(source),
               ),
-          ],
-        ),
-      );
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class _Chip extends StatelessWidget {
@@ -275,239 +316,21 @@ class _EmptyState extends StatelessWidget {
   final FeedSource source;
 
   @override
-  Widget build(BuildContext context) => ListView(
-        padding: const EdgeInsets.fromLTRB(28, 60, 28, 28),
-        children: [
-          const Icon(Icons.inbox_rounded, size: 40, color: kTextMuted),
-          const SizedBox(height: 16),
-          Text(
-            source == FeedSource.following
-                ? "Rien à afficher. Ce flux ne montre que les comptes que tu "
-                    'suis — tire vers le bas pour recharger, ou passe sur '
-                    '« Global ».'
-                : 'Rien à afficher pour ce flux.',
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: kTextMuted, height: 1.5),
-          ),
-        ],
-      );
-}
-
-class PostCard extends StatelessWidget {
-  const PostCard({
-    super.key,
-    required this.post,
-    required this.nexus,
-    required this.profiles,
-    this.pending = false,
-  });
-
-  final PubkyPost post;
-  final NexusClient nexus;
-  final Map<String, PubkyProfile> profiles;
-
-  /// Published from this device and not yet visible through the indexer.
-  final bool pending;
-
-  @override
   Widget build(BuildContext context) {
-    final images = post.imageUrls();
-    final author = profiles[post.author];
-    final name = author?.name ?? _shortKey(post.author);
-    final replies = post.counts['replies'] ?? 0;
-    final tags = post.counts['tags'] ?? 0;
-    final reposts = post.counts['reposts'] ?? 0;
-
-    return Panel(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              InkWell(
-                onTap: () => showProfileSheet(
-                  context,
-                  nexus: nexus,
-                  pubky: post.author,
-                  known: author,
-                ),
-                borderRadius: BorderRadius.circular(999),
-                child: ClipOval(
-                  child: Image.network(
-                    '$nexusBase/static/avatar/${post.author}',
-                    width: 36,
-                    height: 36,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => Container(
-                      width: 36,
-                      height: 36,
-                      color: kBackground,
-                      alignment: Alignment.center,
-                      child: Text(
-                        name.characters.first.toUpperCase(),
-                        style: const TextStyle(
-                          color: kAccent,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14.5,
-                      ),
-                    ),
-                    Text(
-                      pending
-                          ? "publié à l'instant · en attente d'indexation"
-                          : _relative(post.indexedAt),
-                      style: TextStyle(
-                        color: pending ? kAccent : kTextMuted,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (post.kind != 'short' && post.kind != 'unknown')
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: kBackground,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: kBorder),
-                  ),
-                  child: Text(
-                    post.kind,
-                    style: const TextStyle(color: kTextMuted, fontSize: 11),
-                  ),
-                ),
-            ],
-          ),
-          if (post.content.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            PostContent(
-              content: post.content,
-              nexus: nexus,
-              knownProfiles: profiles,
-            ),
-          ],
-          if (images.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: images.length == 1
-                  ? _Thumb(url: images.first, height: 190)
-                  : SizedBox(
-                      height: 130,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: images.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 8),
-                        itemBuilder: (_, i) => ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: SizedBox(
-                            width: 170,
-                            child: _Thumb(url: images[i], height: 130),
-                          ),
-                        ),
-                      ),
-                    ),
-            ),
-          ],
-          if (replies + tags + reposts > 0) ...[
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                if (replies > 0) _Metric(Icons.mode_comment_outlined, replies),
-                if (reposts > 0) _Metric(Icons.repeat_rounded, reposts),
-                if (tags > 0) _Metric(Icons.sell_outlined, tags),
-              ],
-            ),
-          ],
-        ],
-      ),
+    final l = L10n.of(context);
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(28, 60, 28, 28),
+      children: [
+        const Icon(Icons.inbox_rounded, size: 40, color: kTextMuted),
+        const SizedBox(height: 16),
+        Text(
+          source == FeedSource.following
+              ? l.feedEmptyFollowing
+              : l.feedEmptyOther,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: kTextMuted, height: 1.5),
+        ),
+      ],
     );
   }
-
-  static String _shortKey(String key) =>
-      key.length <= 12 ? key : '${key.substring(0, 6)}…${key.substring(key.length - 4)}';
-
-  static String _relative(DateTime? d) {
-    if (d == null) return '';
-    final diff = DateTime.now().difference(d);
-    if (diff.inMinutes < 1) return "à l'instant";
-    if (diff.inMinutes < 60) return 'il y a ${diff.inMinutes} min';
-    if (diff.inHours < 24) return 'il y a ${diff.inHours} h';
-    if (diff.inDays < 30) return 'il y a ${diff.inDays} j';
-    String two(int n) => n.toString().padLeft(2, '0');
-    return '${two(d.day)}/${two(d.month)}/${d.year}';
-  }
-}
-
-class _Thumb extends StatelessWidget {
-  const _Thumb({required this.url, required this.height});
-
-  final String url;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) => Image.network(
-        url,
-        height: height,
-        width: double.infinity,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => Container(
-          height: height,
-          color: kBackground,
-          alignment: Alignment.center,
-          child: const Icon(Icons.broken_image_outlined, color: kTextMuted),
-        ),
-        loadingBuilder: (context, child, progress) => progress == null
-            ? child
-            : Container(
-                height: height,
-                color: kBackground,
-                alignment: Alignment.center,
-                child: const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ),
-      );
-}
-
-class _Metric extends StatelessWidget {
-  const _Metric(this.icon, this.value);
-
-  final IconData icon;
-  final int value;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(right: 18),
-        child: Row(
-          children: [
-            Icon(icon, size: 15, color: kTextMuted),
-            const SizedBox(width: 5),
-            Text(
-              '$value',
-              style: const TextStyle(color: kTextMuted, fontSize: 12.5),
-            ),
-          ],
-        ),
-      );
 }

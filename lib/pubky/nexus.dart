@@ -47,7 +47,7 @@ class PubkyProfile {
 
     return PubkyProfile(
       id: details['id']?.toString() ?? '',
-      name: nonEmpty(details['name']) ?? 'Sans nom',
+      name: nonEmpty(details['name']) ?? '',
       bio: nonEmpty(details['bio']),
       status: nonEmpty(details['status']),
       links: rawLinks
@@ -92,14 +92,13 @@ class ProfileTag {
 /// against the live API: `author` and `post_replies` need extra ids and are
 /// left out on purpose.
 enum FeedSource {
-  following('following', 'Abonnements'),
-  friends('friends', 'Amis'),
-  all('all', 'Global'),
-  bookmarks('bookmarks', 'Favoris');
+  following('following'),
+  friends('friends'),
+  all('all'),
+  bookmarks('bookmarks');
 
-  const FeedSource(this.apiValue, this.label);
+  const FeedSource(this.apiValue);
   final String apiValue;
-  final String label;
 }
 
 /// One entry of a stream. Mirrors `GET /v0/stream/posts`.
@@ -113,6 +112,8 @@ class PubkyPost {
     required this.counts,
     required this.tags,
     required this.indexedAt,
+    this.repostedUri,
+    this.repliedUri,
   });
 
   final String id;
@@ -129,6 +130,21 @@ class PubkyPost {
   final List<ProfileTag> tags;
   final DateTime? indexedAt;
 
+  /// `pubky://<author>/pub/pubky.app/posts/<id>` of the post this one reposts,
+  /// when it does. A repost is an ordinary post that points at another; with
+  /// content of its own it reads as a quote, without it as a plain share.
+  final String? repostedUri;
+
+  /// Same, for a reply.
+  final String? repliedUri;
+
+  bool get isRepost => repostedUri != null;
+  bool get isReply => repliedUri != null;
+
+  /// True when the repost carries words of its own — a quote rather than a
+  /// bare share. Worth distinguishing: a quote deserves its own text on top.
+  bool get isQuote => isRepost && content.trim().isNotEmpty;
+
   /// Nexus renders three sizes; `feed` is the one sized for a timeline —
   /// measured at 7.7 kB WebP against 149 kB JPEG for `main` on the same image.
   List<String> imageUrls({String variant = 'feed'}) => attachments
@@ -144,10 +160,19 @@ class PubkyPost {
     return '$nexusBase/static/files/${match.group(1)}/${match.group(2)}/$variant';
   }
 
+  /// Splits `pubky://<author>/pub/pubky.app/posts/<id>` into its two useful
+  /// halves. Returns null for anything that is not a post URI.
+  static ({String author, String id})? parsePostUri(String uri) {
+    final m = RegExp(r'^pubky://([^/]+)/pub/pubky\.app/posts/([^/?#]+)')
+        .firstMatch(uri);
+    return m == null ? null : (author: m.group(1)!, id: m.group(2)!);
+  }
+
   factory PubkyPost.fromJson(Map<String, dynamic> json) {
     final details = (json['details'] as Map<String, dynamic>?) ?? const {};
     final rawCounts = (json['counts'] as Map<String, dynamic>?) ?? const {};
     final rawTags = (json['tags'] as List<dynamic>?) ?? const [];
+    final rel = (json['relationships'] as Map<String, dynamic>?) ?? const {};
     final ms = details['indexed_at'];
 
     return PubkyPost(
@@ -166,6 +191,8 @@ class PubkyPost {
       indexedAt: ms is num
           ? DateTime.fromMillisecondsSinceEpoch(ms.toInt(), isUtc: true).toLocal()
           : null,
+      repostedUri: rel['reposted']?.toString(),
+      repliedUri: rel['replied']?.toString(),
     );
   }
 }
@@ -184,7 +211,7 @@ class NexusError implements Exception {
   final String body;
 
   @override
-  String toString() => 'Nexus a répondu $status\u00A0: $body';
+  String toString() => 'Nexus answered $status\u00A0: $body';
 }
 
 class NexusClient {
@@ -302,8 +329,151 @@ class NexusClient {
     return out;
   }
 
+  /// Reads a single post — used to show what a repost or a reply points at.
+  Future<PubkyPost?> fetchPost(String author, String id) async {
+    try {
+      final res = await _client
+          .get(Uri.parse('$nexusBase/v0/post/$author/$id'))
+          .timeout(_timeout);
+      if (res.statusCode != 200) return null;
+      final decoded = jsonDecode(utf8.decode(res.bodyBytes));
+      if (decoded is! Map<String, dynamic>) return null;
+      return PubkyPost.fromJson(decoded);
+    } catch (_) {
+      // A quoted post that cannot be loaded is not an error worth surfacing:
+      // the card shows the quote as unavailable and the rest still reads.
+      return null;
+    }
+  }
+
+  /// Reads the account's notifications, newest first.
+  Future<List<PubkyNotification>> fetchNotifications({
+    required String pubky,
+    int limit = 30,
+  }) async {
+    final res = await _client
+        .get(Uri.parse('$nexusBase/v0/user/$pubky/notifications?limit=$limit'))
+        .timeout(_timeout);
+
+    if (res.statusCode != 200) {
+      throw NexusError(res.statusCode, _shorten(res.body));
+    }
+    final decoded = jsonDecode(utf8.decode(res.bodyBytes));
+    if (decoded is! List) return const [];
+    return decoded
+        .whereType<Map<String, dynamic>>()
+        .map(PubkyNotification.fromJson)
+        .toList();
+  }
+
   void close() => _client.close();
 
   static String _shorten(String body) =>
       body.length <= 200 ? body : '${body.substring(0, 200)}…';
+}
+
+/// The kinds Nexus emits, read from its OpenAPI rather than guessed.
+enum NotificationKind {
+  follow,
+  newFriend,
+  lostFriend,
+  tagPost,
+  tagProfile,
+  untagPost,
+  untagProfile,
+  reply,
+  repost,
+  mention,
+  postDeleted,
+  postEdited,
+  unknown;
+
+  static NotificationKind parse(String? raw) => switch (raw) {
+        'follow' => follow,
+        'new_friend' => newFriend,
+        'lost_friend' => lostFriend,
+        'tag_post' => tagPost,
+        'tag_profile' => tagProfile,
+        'untag_post' => untagPost,
+        'untag_profile' => untagProfile,
+        'reply' => reply,
+        'repost' => repost,
+        'mention' => mention,
+        'post_deleted' => postDeleted,
+        'post_edited' => postEdited,
+        // Nexus can add kinds without warning; an unknown one is shown as
+        // such rather than dropped, so nothing disappears silently.
+        _ => unknown,
+      };
+}
+
+/// One entry of `GET /v0/user/{id}/notifications`.
+class PubkyNotification {
+  const PubkyNotification({
+    required this.kind,
+    required this.rawKind,
+    required this.timestamp,
+    this.actor,
+    this.label,
+    this.postUri,
+  });
+
+  final NotificationKind kind;
+
+  /// Kept for the unknown case, so the interface can name what it received.
+  final String rawKind;
+
+  final DateTime timestamp;
+
+  /// Whoever caused it. The field carrying it differs per kind, hence the
+  /// several fallbacks below.
+  final String? actor;
+
+  /// Tag label, for the tag kinds.
+  final String? label;
+
+  /// The post concerned, when there is one.
+  final String? postUri;
+
+  factory PubkyNotification.fromJson(Map<String, dynamic> json) {
+    final body = (json['body'] as Map<String, dynamic>?) ?? const {};
+    final ms = json['timestamp'];
+
+    String? first(List<String> keys) {
+      for (final k in keys) {
+        final v = body[k]?.toString();
+        if (v != null && v.isNotEmpty) return v;
+      }
+      return null;
+    }
+
+    return PubkyNotification(
+      kind: NotificationKind.parse(body['type']?.toString()),
+      rawKind: body['type']?.toString() ?? 'unknown',
+      timestamp: ms is num
+          ? DateTime.fromMillisecondsSinceEpoch(ms.toInt(), isUtc: true).toLocal()
+          : DateTime.now(),
+      actor: first(const [
+        'followed_by',
+        'unfollowed_by',
+        'tagged_by',
+        'untagged_by',
+        'replied_by',
+        'reposted_by',
+        'mentioned_by',
+        'deleted_by',
+        'edited_by',
+      ]),
+      label: body['tag_label']?.toString(),
+      postUri: first(const [
+        'post_uri',
+        'reply_uri',
+        'repost_uri',
+        'parent_post_uri',
+        'linked_uri',
+        'deleted_uri',
+        'edited_uri',
+      ]),
+    );
+  }
 }

@@ -129,7 +129,9 @@ void main() {
       final bare = PubkyProfile.fromJson({
         'details': {'id': 'abc'},
       });
-      expect(bare.name, 'Sans nom');
+      // The model no longer invents a placeholder name: wording belongs to the
+      // interface, which translates it.
+      expect(bare.name, isEmpty);
       expect(bare.bio, isNull);
       expect(bare.links, isEmpty);
       expect(bare.counts, isEmpty);

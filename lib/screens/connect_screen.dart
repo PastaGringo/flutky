@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/app_localizations.dart';
+import '../main.dart' show LocalizedError;
 import '../pubky/ring_session.dart';
 import '../theme.dart';
 
@@ -17,7 +19,7 @@ class ConnectScreen extends StatelessWidget {
   });
 
   final bool busy;
-  final String? error;
+  final LocalizedError? error;
 
   /// Ring already handed a session back; we are fetching the profile.
   final bool awaitingProfile;
@@ -31,6 +33,7 @@ class ConnectScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = L10n.of(context);
     final err = error;
 
     return Scaffold(
@@ -62,11 +65,10 @@ class ConnectScreen extends StatelessWidget {
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
                   const SizedBox(height: 10),
-                  const Text(
-                    'Preuve de concept : se connecter avec son compte Pubky '
-                    'via Pubky Ring, puis afficher son profil.',
+                  Text(
+                    l.connectTagline,
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: kTextMuted, height: 1.5, fontSize: 15),
+                    style: const TextStyle(color: kTextMuted, height: 1.5, fontSize: 15),
                   ),
                   const SizedBox(height: 30),
                   if (busy || awaitingProfile) ...[
@@ -82,8 +84,8 @@ class ConnectScreen extends StatelessWidget {
                           Expanded(
                             child: Text(
                               busy
-                                  ? 'Lecture du profil chez Nexus…'
-                                  : 'Session reçue. Chargement…',
+                                  ? l.connectLoadingProfile
+                                  : l.connectSessionReceived,
                               style: const TextStyle(color: kTextMuted),
                             ),
                           ),
@@ -95,25 +97,25 @@ class ConnectScreen extends StatelessWidget {
                     FilledButton.icon(
                       onPressed: () => onConnect(SessionUrlVariant.plain),
                       icon: const Icon(Icons.open_in_new_rounded, size: 20),
-                      label: const Text('Se connecter avec Pubky Ring'),
+                      label: Text(l.connectButton),
                     ),
                     const SizedBox(height: 10),
                     TextButton(
                       onPressed: () => onConnect(SessionUrlVariant.trailingSlash),
-                      child: const Text(
-                        "Essayer l'autre format de lien (session/)",
-                        style: TextStyle(color: kTextMuted, fontSize: 13),
+                      child: Text(
+                        l.connectAltLink,
+                        style: const TextStyle(color: kTextMuted, fontSize: 13),
                       ),
                     ),
                   ],
                   if (err != null) ...[
                     const SizedBox(height: 8),
-                    ErrorPanel(message: err),
+                    ErrorPanel(message: err(l)),
                     if (onRetry != null) ...[
                       const SizedBox(height: 12),
                       OutlinedButton(
                         onPressed: busy ? null : onRetry,
-                        child: const Text('Réessayer la lecture du profil'),
+                        child: Text(l.connectRetryProfile),
                       ),
                     ],
                   ],
@@ -145,9 +147,9 @@ class _Exchange extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final all = StringBuffer();
-    if (outbound != null) all.writeln('ENVOYÉ : $outbound');
+    if (outbound != null) all.writeln('SENT: $outbound');
     for (var i = 0; i < inbound.length; i++) {
-      all.writeln('REÇU ${i + 1} : ${inbound[i]}');
+      all.writeln('RECEIVED ${i + 1}: ${inbound[i]}');
     }
 
     return Panel(
@@ -158,7 +160,7 @@ class _Exchange extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'ÉCHANGE AVEC RING',
+                L10n.of(context).exchangeTitle,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -170,7 +172,7 @@ class _Exchange extends StatelessWidget {
                   await Clipboard.setData(ClipboardData(text: all.toString()));
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Échange copié')),
+                      SnackBar(content: Text(L10n.of(context).exchangeCopied)),
                     );
                   }
                 },
@@ -183,19 +185,19 @@ class _Exchange extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          if (outbound != null) _Line(tag: 'ENVOYÉ', value: '$outbound'),
+          if (outbound != null) _Line(tag: L10n.of(context).exchangeSent, value: '$outbound'),
           if (inbound.isEmpty)
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
               child: Text(
-                'Rien reçu de Ring pour l’instant.',
-                style: TextStyle(color: kTextMuted, fontSize: 12.5),
+                L10n.of(context).exchangeNothingYet,
+                style: const TextStyle(color: kTextMuted, fontSize: 12.5),
               ),
             )
           else
             for (var i = 0; i < inbound.length; i++)
               _Line(
-                tag: inbound.length == 1 ? 'REÇU' : 'REÇU ${i + 1}',
+                tag: inbound.length == 1 ? L10n.of(context).exchangeReceived : '${L10n.of(context).exchangeReceived} ${i + 1}',
                 value: '${inbound[i]}',
                 highlight: true,
               ),
@@ -251,23 +253,18 @@ class _HowItWorks extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Ce qui va se passer',
+              L10n.of(context).howItWorksTitle,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 14),
-            const _Step(1, 'Flutky ouvre Pubky Ring par un lien '
-                'pubkyring://session.'),
-            const _Step(2, 'Ring demande quel pubky utiliser, puis affiche un '
-                "écran d'approbation."),
-            const _Step(3, 'Ring rouvre Flutky en lui passant la clé publique '
-                'et un secret de session.'),
-            const _Step(4, 'Flutky lit le profil chez Nexus, sans '
-                'authentification.'),
+            _Step(1, L10n.of(context).howItWorksStep1),
+            _Step(2, L10n.of(context).howItWorksStep2),
+            _Step(3, L10n.of(context).howItWorksStep3),
+            _Step(4, L10n.of(context).howItWorksStep4),
             const SizedBox(height: 14),
-            const Text(
-              'Le secret de session reste en mémoire, il n’est ni affiché '
-              'ni enregistré.',
-              style: TextStyle(color: kTextMuted, fontSize: 13, height: 1.45),
+            Text(
+              L10n.of(context).howItWorksSecret,
+              style: const TextStyle(color: kTextMuted, fontSize: 13, height: 1.45),
             ),
           ],
         ),

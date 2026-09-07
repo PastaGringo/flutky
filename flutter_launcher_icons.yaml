@@ -1,0 +1,9 @@
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/icon.png"
+  # Adaptive icon: Android composes the background and the foreground itself,
+  # and may crop up to 25% of each edge — the foreground is drawn inset for it.
+  adaptive_icon_background: "#05070A"
+  adaptive_icon_foreground: "assets/icon/icon_foreground.png"
+  min_sdk_android: 24

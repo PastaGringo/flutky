@@ -1,145 +1,153 @@
 # Flutky
 
-Preuve de concept Flutter : se connecter à un compte **Pubky** en passant par
-**Pubky Ring**, puis afficher son profil.
+A Flutter client for [Pubky](https://pubky.org), built to answer one question:
+**how far can a Flutter app go on Pubky without any Rust?**
 
-Elle répond à une seule question : *une application Flutter peut-elle ouvrir
-Pubky Ring, obtenir une session, et afficher les informations du compte ?*
+Further than expected — including publishing. See [Status](#status).
 
-## Installer et mettre à jour
+**Android only.** There is no iOS build: the project is developed on Windows,
+and building for iOS needs macOS.
 
-**Android uniquement** — pas de build iOS.
+- **Install and try it →** [INSTALL.md](INSTALL.md)
+- **Publish a release →** [RELEASING.md](RELEASING.md)
 
-Pour installer et tester : **[INSTALL.md](INSTALL.md)** *(in English)*. Les
-mises à jour passent par [Obtainium](https://github.com/ImranR98/Obtainium),
-qui lit les *releases* de ce dépôt. Côté publication, le keystore et la
-procédure sont dans [RELEASING.md](RELEASING.md).
+## Status
 
-## Ce qu'elle fait — et ne fait pas
+### Working
 
 | | |
 |---|---|
-| ✅ | Ouvre Pubky Ring par un lien `pubkyring://session` |
-| ✅ | Reçoit en retour la clé publique et un secret de session |
-| ✅ | Garde la session dans le keystore — un seul passage par Ring |
-| ✅ | Lit le profil (avatar, nom, statut, bio, liens, compteurs, tags) |
-| ✅ | Lit le flux : abonnements, amis, global, favoris — avec images |
-| ✅ | Rend les mentions cliquables et ouvre le profil de la personne citée |
-| ✅ | Publie un post court sur le homeserver |
-| ✅ | Embarque une page de diagnostic pour l'authentification |
-| ❌ | Pas encore : suivre, taguer, répondre, envoyer une image |
+| ✅ | Sign in through **Pubky Ring**, app-to-app, no QR code and nothing to type |
+| ✅ | Session kept in the Android keystore — one trip through Ring, not one per launch |
+| ✅ | Profile: avatar, name, status, bio, links, counters, tags |
+| ✅ | Feed: following, friends, global, bookmarks — paginated, with images |
+| ✅ | Reposts and quotes, showing the original post inline |
+| ✅ | `@mentions` rendered as names, tap to open that person's profile |
+| ✅ | Notifications: follows, tags, replies, reposts, mentions — the twelve kinds Nexus emits |
+| ✅ | **Publishing** a short post to your homeserver |
+| ✅ | French and English, switchable in-app |
+| ✅ | Built-in diagnostics for the authentication path |
 
-**Aucune ligne de Rust**, y compris pour écrire. La lecture passe par Nexus,
-l'indexeur public derrière pubky.app, dont l'API v0 ne demande aucune
-authentification. L'écriture s'authentifie soit par cookie, soit — pour une
-session *grant* — en signant une preuve de possession Ed25519 et en
-l'échangeant contre un jeton porteur, ce que fait `lib/pubky/grant_auth.dart`.
+### Not there yet
 
-## Le flux, tel qu'il est implémenté dans Ring
+| | |
+|---|---|
+| ❌ | Following, tagging, bookmarking, replying — reads only, no writes |
+| ❌ | Attaching an image to a post (needs binary upload) |
+| ❌ | Deleting or editing your own posts |
+| ❌ | Opening a post to read its replies |
+| ❌ | Search |
+| ❌ | Push notifications (the tab polls; there is no background delivery) |
+| ❌ | Choosing your own homeserver — `homeserver.pubky.app` is assumed |
+| ❌ | iOS |
 
-Décrit en tête de `src/utils/actions/sessionAction.ts` du dépôt `pubky-ring`,
-et publié dans la version **1.19** (2026-09-04) :
+Missing features are listed rather than reported: no need to open an issue for
+them. [Feature requests](https://github.com/PastaGringo/flutky/issues/new?template=feature_request.yml)
+about what to build next are welcome.
 
-```
-1. Flutky ouvre  pubkyring://session?x-success=flutky://session&x-error=…&x-cancel=…&x-source=Flutky
-2. Ring demande quel pubky utiliser
-3. Ring affiche un écran d'approbation
-4. Ring rouvre  flutky://session?pubky=…&grant_secret=…&capabilities=…
-```
+## No Rust — including for writing
 
-⚠️ **Le nom du secret dépend de la version de Ring** : `session_secret`
-jusqu'à la 1.18, `grant_secret` depuis la 1.19 (commit `4f2798a` du
-2026-09-03). Flutky accepte les deux, et se fie à la présence de la charge
-utile plutôt qu'à l'hôte du lien de retour — plusieurs gestionnaires de Ring
-rappellent l'URL de succès sans y ajouter le moindre paramètre.
+Reading goes through **Nexus**, the public indexer behind pubky.app, whose v0
+API needs no authentication at all.
 
-Ring déclare les schémas `pubkyring` et `pubkyauth` sur Android comme sur iOS ;
-Flutky déclare `flutky`. Le retour se fait donc d'application à application,
-sans relais HTTP ni scrutation.
+Writing was supposed to need the Rust SDK. It does not:
 
-## Sécurité
+- a **cookie** session authenticates with a plain `Cookie` header;
+- a **grant** session needs a Proof-of-Possession JWS signed with Ed25519,
+  exchanged at `/auth/grant/session` for a short-lived bearer — reimplemented
+  in [`lib/pubky/grant_auth.dart`](lib/pubky/grant_auth.dart).
 
-Le secret de session vaut mot de passe : qui le détient agit comme
-l'utilisateur. Il est gardé dans le **keystore de la plateforme**, n'est jamais
-affiché, journalisé, ni inclus dans le rapport de diagnostic — celui-ci n'en
-donne que la longueur, la forme et le nombre de segments.
+Both paths are in the app, and which one applies is read from the secret's own
+format rather than guessed.
 
-⚠️ **Le secret exporté n'est pas la valeur du cookie.** `export_secret()` du
-SDK rend `<clé>:<secret>` ; envoyer la chaîne entière donne
-`No authenticated session found`, qui ressemble à s'y méprendre à une session
-expirée. Voir `lib/pubky/cookie_auth.dart`.
+## Three traps this codebase documents
 
-À savoir : Ring signe la session avec **son propre** identifiant applicatif.
-Côté homeserver, la session est donc indiscernable de celle de Ring et ne peut
-pas être révoquée séparément.
+**The exported secret is not the cookie value.** `export_secret()` in the Pubky
+SDK returns `<key>:<secret>`; sending the whole string yields
+`No authenticated session found`, which reads exactly like an expired session.
+Measured: 79 characters = 52 + 1 + 26.
+See [`cookie_auth.dart`](lib/pubky/cookie_auth.dart).
 
-## Structure
+**Resource ids are byte-oriented Crockford base32.** The obvious arithmetic
+conversion produces thirteen perfectly valid characters that decode to a
+different instant; the homeserver accepts the post and the indexer silently
+drops it. The test decodes *real* pubky.app ids and checks they land near their
+indexing date — a round trip through our own encoder would stay green with a
+wrong formula. See [`crockford.dart`](lib/pubky/crockford.dart).
+
+**A 401 from the homeserver is not diagnostic.** It answers 401 for a bad
+session, a forbidden path and a route that does not exist alike. Hence the
+in-app diagnostics page: eight probes side by side, two of which use no
+authentication and must succeed — they are what give the others meaning.
+
+## Layout
 
 ```
 lib/
-  main.dart                    machine à états : restauration, attente, app
-  theme.dart                   palette et blocs partagés
-  pubky/ring_session.dart      construction du lien et lecture du callback
-  pubky/session_store.dart     session dans le keystore de la plateforme
-  pubky/nexus.dart             client Nexus + modèles profil et post
-  pubky/cookie_auth.dart       découpage du secret exporté
-  pubky/grant_auth.dart        preuve de possession et échange de jeton
-  pubky/crockford.dart         identifiants horodatés des ressources
-  pubky/mentions.dart          découpage du contenu : texte, mentions, liens
-  pubky/homeserver.dart        écriture sur le homeserver
-  pubky/diagnostics.dart       sondes d'authentification
-  screens/home_shell.dart      onglets Flux / Profil
-  screens/                     connexion, flux, profil, composition, diagnostic
-test/                          67 tests — hors ligne et contre le réseau réel
-  fixtures/                    réponses réelles de Nexus, non retouchées
+  main.dart                    state machine: restore, wait, run
+  l10n/                        ARB translation templates (en, fr)
+  settings/locale_controller.dart
+  pubky/
+    ring_session.dart          deep link out, callback in
+    cookie_auth.dart           splitting the exported secret
+    grant_auth.dart            PoP signing and bearer exchange
+    session_store.dart         session in the platform keystore
+    crockford.dart             timestamp ids
+    mentions.dart              content into text, mentions and links
+    nexus.dart                 indexer client and models
+    homeserver.dart            writing
+    diagnostics.dart           authentication probes
+  screens/                     connect, feed, notifications, profile,
+                               compose, diagnostics, settings
+test/                          67 tests, offline and against the live network
+  fixtures/                    untouched Nexus responses
 ```
 
-### Points mesurés sur l'API de flux
+## Translating
 
-- `limit` est borné à 50 (`BoundedLimit_10_50`), `skip` pagine.
-- `observer_id` est ce qui personnalise : sans lui, `following` retombe
-  silencieusement sur la chronologie globale. Un test réseau vérifie que deux
-  observateurs obtiennent bien deux flux différents.
-- Les sources exposées (`following`, `friends`, `all`, `bookmarks`) sont celles
-  qui répondent avec un simple observateur ; `author` et `post_replies` exigent
-  des identifiants supplémentaires et rendent 400.
-- Une pièce jointe `pubky://<auteur>/pub/pubky.app/files/<id>` se lit à
-  `/static/files/<auteur>/<id>/<variante>`, avec trois variantes seulement :
-  `main` (149 ko JPEG mesurés), `feed` (7,7 ko WebP) et `small` (2,9 ko). Tout
-  autre nom rend 400.
+Translations are ARB templates — the Flutter standard. Adding a language means
+copying `lib/l10n/app_en.arb`, translating the values, and adding the locale to
+`LocaleController.supported`. Keys and placeholders stay as they are.
 
-## Développer
+```bash
+cp lib/l10n/app_en.arb lib/l10n/app_es.arb   # then translate the values
+flutter gen-l10n
+```
+
+## Developing
 
 ```bash
 flutter pub get
 flutter analyze
-flutter test test/pubky_test.dart      # hors ligne, déterministe
-flutter test test/network_test.dart    # touche le réseau réel
+flutter test test/pubky_test.dart      # offline, deterministic
+flutter test test/network_test.dart    # hits nexus.pubky.app
 flutter build apk --release
 ```
 
-L'APK est signé avec la clé de release quand `android/key.properties` et le
-keystore sont présents, et retombe sur la clé de débogage sinon — voir
-[RELEASING.md](RELEASING.md).
+The release APK is signed with the project key when `android/key.properties`
+and the keystore are present, and falls back to the debug key otherwise.
 
-## Prérequis pour l'essayer
+## Measured, not assumed
 
-**Pubky Ring ≥ 1.19** installé sur le même téléphone, avec au moins un pubky
-enregistré. Une version antérieure ne répond pas au lien `pubkyring://session`.
+Everything below was checked against the live network rather than read from
+documentation:
 
-Un compte que Nexus n'a jamais indexé n'a pas de profil à afficher : l'indexeur
-n'apprend l'existence d'une clé qu'une fois celle-ci reliée au graphe social.
-L'application le dit explicitement plutôt que d'afficher une erreur brute, et
-demande son indexation au passage.
+- `limit` on the feed is capped at 50; `skip` paginates.
+- `observer_id` is what personalises a stream — `following` and `bookmarks`
+  answer **400** without it, which is how the app knows it is honoured.
+- Feed images live at `/static/files/<author>/<id>/<variant>`, with three
+  variants only: `main` (149 kB JPEG measured), `feed` (7.7 kB WebP) and
+  `small` (2.9 kB). Anything else answers 400.
+- The documented `/storage/<key>/<path>` write form answers **500** on the
+  official homeserver; only the legacy `?pubky-host=` form works.
+- A mention is the literal `pubky` followed by the 52-character key, with no
+  separator — verified against the list Nexus itself publishes in
+  `relationships.mentioned`.
 
-## Points mesurés
+## Licence
 
-- `GET /v0/user/{id}` sur `nexus.pubky.app` : profil complet, sans jeton.
-- `GET /static/avatar/{id}` : `200 image/webp`, contre `404` pour une clé
-  inconnue — l'avatar n'a pas besoin d'être résolu depuis son URI `pubky://`.
-- Nexus publie un OpenAPI 3.1 (`nexus-webapi 0.4.1`) : 43 points d'entrée,
-  81 schémas.
+MIT.
 
 ---
 
-Réalisé par [Delvops](https://delvops.fr).
+Built by [Delvops](https://delvops.fr).

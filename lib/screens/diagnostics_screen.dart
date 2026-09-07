@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../l10n/app_localizations.dart';
 
 import '../pubky/diagnostics.dart';
 import '../pubky/ring_session.dart';
@@ -53,7 +54,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
       out
         ..writeln('— ${r.name}')
         ..writeln('  ${r.detail}')
-        ..writeln('  ${r.error != null ? "ERREUR ${r.error}" : "HTTP ${r.status} · ${r.body}"}')
+        ..writeln('  ${r.error != null ? "ERROR ${r.error}" : "HTTP ${r.status} · ${r.body}"}')
         ..writeln();
     }
     return out.toString();
@@ -68,12 +69,12 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: kBackground,
-        title: const Text('Diagnostic'),
+        title: Text(L10n.of(context).titleDiagnostics),
         actions: [
           IconButton(
             onPressed: _running ? null : _run,
             icon: const Icon(Icons.refresh_rounded),
-            tooltip: 'Relancer',
+            tooltip: L10n.of(context).diagRerun,
           ),
           IconButton(
             onPressed: _results == null
@@ -82,12 +83,12 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                     await Clipboard.setData(ClipboardData(text: _asText()));
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Diagnostic copié')),
+                        SnackBar(content: Text(L10n.of(context).diagCopied)),
                       );
                     }
                   },
             icon: const Icon(Icons.copy_rounded),
-            tooltip: 'Copier le rapport',
+            tooltip: L10n.of(context).diagCopyReport,
           ),
         ],
       ),
@@ -99,7 +100,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _Title('SECRET DE SESSION'),
+                  _Title(L10n.of(context).diagSecretSection),
                   const SizedBox(height: 12),
                   for (final entry in description.entries)
                     Padding(
@@ -124,9 +125,9 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                       ),
                     ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'La valeur du secret n’est jamais affichée ni copiée.',
-                    style: TextStyle(color: kTextMuted, fontSize: 11.5),
+                  Text(
+                    L10n.of(context).diagNeverShown,
+                    style: const TextStyle(color: kTextMuted, fontSize: 11.5),
                   ),
                 ],
               ),
@@ -149,15 +150,10 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                 const SizedBox(height: 10),
               ],
             const SizedBox(height: 6),
-            const Panel(
+            Panel(
               child: Text(
-                'Le homeserver répond 401 même sur une route inexistante : '
-                'l’authentification passe avant le routage. Un 401 isolé ne '
-                'prouve donc rien. Ce sont les deux témoins du haut — qui '
-                'n’utilisent aucune authentification — qui donnent leur sens '
-                'aux autres : s’ils passent, l’adresse et le réseau sont bons, '
-                'et un refus plus bas concerne bien la session.',
-                style: TextStyle(color: kTextMuted, fontSize: 12.5, height: 1.5),
+                L10n.of(context).diagFootnote,
+                style: const TextStyle(color: kTextMuted, fontSize: 12.5, height: 1.5),
               ),
             ),
           ],
@@ -201,7 +197,7 @@ class _ProbeTile extends StatelessWidget {
                   border: Border.all(color: color.withValues(alpha: 0.45)),
                 ),
                 child: Text(
-                  result.error != null ? 'échec' : '${result.status}',
+                  result.error != null ? L10n.of(context).diagFailed : '${result.status}',
                   style: TextStyle(
                     color: color,
                     fontSize: 12,

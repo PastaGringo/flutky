@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../l10n/app_localizations.dart';
+import '../main.dart' show LocalizedError;
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -8,17 +11,25 @@ import '../theme.dart';
 
 /// Order matters: these are the counts worth surfacing first, with the label
 /// Nexus does not carry.
-const _countLabels = <String, String>{
-  'posts': 'Publications',
-  'replies': 'Réponses',
-  'followers': 'Abonnés',
-  'following': 'Abonnements',
-  'friends': 'Amis',
-  'tagged': 'Fois taggé',
-  'unique_tags': 'Tags distincts',
-  'bookmarks': 'Favoris',
-  'collections': 'Collections',
-};
+/// Order matters: these are the counts worth surfacing first. Nexus carries
+/// the numbers, not the wording, so each label comes from the translations.
+String? countLabel(L10n l, String key) => switch (key) {
+      'posts' => l.countPosts,
+      'replies' => l.countReplies,
+      'followers' => l.countFollowers,
+      'following' => l.countFollowing,
+      'friends' => l.countFriends,
+      'tagged' => l.countTagged,
+      'unique_tags' => l.countUniqueTags,
+      'bookmarks' => l.countBookmarks,
+      'collections' => l.countCollections,
+      _ => null,
+    };
+
+const _countOrder = [
+  'posts', 'replies', 'followers', 'following',
+  'friends', 'tagged', 'unique_tags', 'bookmarks', 'collections',
+];
 
 /// Profile tab body. The surrounding chrome (app bar, tabs) lives in the
 /// shell, so this widget is just the scrollable content.
@@ -33,11 +44,12 @@ class ProfileScreen extends StatelessWidget {
 
   final RingSession session;
   final PubkyProfile profile;
-  final String? error;
+  final LocalizedError? error;
   final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
+    final l = L10n.of(context);
     final err = error;
 
     return RefreshIndicator(
@@ -46,7 +58,7 @@ class ProfileScreen extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 36),
         children: [
           if (err != null) ...[
-            ErrorPanel(message: err),
+            ErrorPanel(message: err(l)),
             const SizedBox(height: 18),
           ],
           _Header(profile: profile),
@@ -58,7 +70,7 @@ class ProfileScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _SectionTitle('Bio'),
+                  _SectionTitle(L10n.of(context).profileBio),
                   const SizedBox(height: 10),
                   Text(
                     profile.bio!,
@@ -109,7 +121,8 @@ class _Header extends StatelessWidget {
                   color: kSurface,
                   alignment: Alignment.center,
                   child: Text(
-                    profile.name.characters.first.toUpperCase(),
+                    (profile.name.isEmpty ? '?' : profile.name)
+                        .characters.first.toUpperCase(),
                     style: const TextStyle(
                       fontSize: 38,
                       fontWeight: FontWeight.w700,
@@ -122,7 +135,7 @@ class _Header extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            profile.name,
+            profile.name.isEmpty ? L10n.of(context).profileNoName : profile.name,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 26),
           ),
@@ -158,13 +171,13 @@ class _PubkyCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const _SectionTitle('Clé publique'),
+                _SectionTitle(L10n.of(context).profilePublicKey),
                 InkWell(
                   onTap: () async {
                     await Clipboard.setData(ClipboardData(text: pubky));
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Clé copiée')),
+                        SnackBar(content: Text(L10n.of(context).profileKeyCopied)),
                       );
                     }
                   },
@@ -198,9 +211,10 @@ class _Counts extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final entries = _countLabels.entries
-        .where((e) => counts.containsKey(e.key))
-        .map((e) => (label: e.value, value: counts[e.key]!))
+    final l = L10n.of(context);
+    final entries = _countOrder
+        .where(counts.containsKey)
+        .map((k) => (label: countLabel(l, k) ?? k, value: counts[k]!))
         .toList();
 
     if (entries.isEmpty) return const SizedBox.shrink();
@@ -209,7 +223,7 @@ class _Counts extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionTitle('Activité'),
+          _SectionTitle(l.profileActivity),
           const SizedBox(height: 14),
           Wrap(
             spacing: 10,
@@ -261,7 +275,7 @@ class _Links extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _SectionTitle('Liens'),
+            _SectionTitle(L10n.of(context).profileLinks),
             const SizedBox(height: 6),
             for (final link in links)
               InkWell(
@@ -315,7 +329,7 @@ class _Tags extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _SectionTitle('Tags reçus'),
+            _SectionTitle(L10n.of(context).profileTags),
             const SizedBox(height: 14),
             Wrap(
               spacing: 8,
@@ -349,8 +363,9 @@ class _SessionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = L10n.of(context);
     final caps = session.capabilities.isEmpty
-        ? 'aucune capacité annoncée'
+        ? l.profileNoCapabilities
         : session.capabilities.join(', ');
 
     return Panel(
@@ -361,15 +376,15 @@ class _SessionCard extends StatelessWidget {
             children: [
               const Icon(Icons.verified_user_rounded, size: 18, color: kAccent),
               const SizedBox(width: 8),
-              const _SectionTitle('Session Ring'),
+              _SectionTitle(L10n.of(context).profileSession),
             ],
           ),
           const SizedBox(height: 12),
-          _Row('Secret reçu', '${session.grantSecret.length} caractères '
-              '(non affiché)'),
-          _Row('Capacités', caps),
+          _Row(l.profileSecretReceived,
+              l.profileSecretLength(session.grantSecret.length)),
+          _Row(l.profileCapabilities, caps),
           if (indexedAt != null)
-            _Row('Indexé le', _formatDate(indexedAt!)),
+            _Row(l.profileIndexedOn, _formatDate(indexedAt!)),
           const SizedBox(height: 10),
           const Text(
             'Le secret de session vaut mot de passe\u00A0: cette preuve de concept '

@@ -2,32 +2,60 @@ import 'dart:async';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'l10n/app_localizations.dart';
 import 'pubky/nexus.dart';
 import 'pubky/ring_session.dart';
 import 'pubky/session_store.dart';
 import 'screens/connect_screen.dart';
 import 'screens/home_shell.dart';
+import 'settings/locale_controller.dart';
 import 'theme.dart';
 
-void main() => runApp(const FlutkyApp());
+/// An error, kept as a function of the translations rather than as finished
+/// text. A message built before the user switches language would otherwise
+/// stay stuck in the old one.
+typedef LocalizedError = String Function(L10n);
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final locales = LocaleController();
+  await locales.load();
+  runApp(FlutkyApp(locales: locales));
+}
 
 class FlutkyApp extends StatelessWidget {
-  const FlutkyApp({super.key});
+  const FlutkyApp({super.key, required this.locales});
+
+  final LocaleController locales;
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-        title: 'Flutky',
-        debugShowCheckedModeBanner: false,
-        theme: flutkyTheme,
-        home: const SessionGate(),
+  Widget build(BuildContext context) => ValueListenableBuilder<Locale?>(
+        valueListenable: locales,
+        builder: (context, locale, _) => MaterialApp(
+          onGenerateTitle: (context) => L10n.of(context).appTitle,
+          debugShowCheckedModeBanner: false,
+          theme: flutkyTheme,
+          locale: locale,
+          supportedLocales: LocaleController.supported,
+          localizationsDelegates: const [
+            L10n.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: SessionGate(locales: locales),
+        ),
       );
 }
 
 /// Holds the whole state machine: restoring a stored session, waiting for
 /// Ring, loading the profile, showing the app, or reporting what went wrong.
 class SessionGate extends StatefulWidget {
-  const SessionGate({super.key});
+  const SessionGate({super.key, required this.locales});
+
+  final LocaleController locales;
 
   @override
   State<SessionGate> createState() => _SessionGateState();
@@ -54,7 +82,7 @@ class _SessionGateState extends State<SessionGate> {
 
   RingSession? _session;
   PubkyProfile? _profile;
-  String? _error;
+  LocalizedError? _error;
   bool _busy = false;
 
   /// True until the keystore has been consulted — without it the connect
@@ -65,7 +93,7 @@ class _SessionGateState extends State<SessionGate> {
   void initState() {
     super.initState();
     _linkSub = _appLinks.uriLinkStream.listen(_onLink, onError: (Object e) {
-      if (mounted) setState(() => _error = 'Lien entrant illisible : $e');
+      if (mounted) setState(() => _error = (l) => l.errorLinkUnreadable('$e'));
     });
     unawaited(_bootstrap());
   }
@@ -109,15 +137,11 @@ class _SessionGateState extends State<SessionGate> {
         unawaited(_store.save(session));
         unawaited(_loadProfile(session.pubky));
       case RingCancelled():
-        setState(() => _error = 'Connexion annulée dans Pubky Ring.');
+        setState(() => _error = (l) => l.errorRingCancelled);
       case RingFailed(:final code, :final message):
-        setState(() => _error = 'Ring a refusé ($code) : $message');
+        setState(() => _error = (l) => l.errorRingRefused(code, message));
       case RingEmpty():
-        setState(() => _error =
-            'Ring est bien revenu vers Flutky, mais sans clé publique ni '
-            "secret de session. C'est la signature d'un lien traité par un "
-            'autre chemin que celui de la session. Le détail complet est '
-            'ci-dessous.');
+        setState(() => _error = (l) => l.errorRingEmpty);
     }
   }
 
@@ -130,15 +154,9 @@ class _SessionGateState extends State<SessionGate> {
       final profile = await _nexus.fetchProfile(pubky);
       if (mounted) setState(() => _profile = profile);
     } on ProfileNotIndexed {
-      if (mounted) {
-        setState(() => _error =
-            "Nexus ne connaît pas encore cette clé. L'indexeur n'apprend "
-            "l'existence d'un compte qu'une fois relié au graphe social : "
-            "publie un message ou suis quelqu'un depuis pubky.app, puis "
-            'réessaie.');
-      }
+      if (mounted) setState(() => _error = (l) => l.errorNotIndexed);
     } catch (e) {
-      if (mounted) setState(() => _error = '$e');
+      if (mounted) setState(() => _error = (_) => '$e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -152,11 +170,9 @@ class _SessionGateState extends State<SessionGate> {
     try {
       await requestSession(variant);
     } on RingNotReachable {
-      setState(() => _error =
-          "Aucune application n'a répondu. Pubky Ring est-il installé "
-          'sur ce téléphone ?');
+      setState(() => _error = (l) => l.errorRingUnreachable);
     } catch (e) {
-      setState(() => _error = "Impossible d'ouvrir Pubky Ring : $e");
+      setState(() => _error = (l) => l.errorRingOpenFailed('$e'));
     }
   }
 
@@ -189,6 +205,7 @@ class _SessionGateState extends State<SessionGate> {
         session: session,
         profile: profile,
         profileError: _error,
+        locales: widget.locales,
         onRefreshProfile: () => _loadProfile(session.pubky),
         onDisconnect: _disconnect,
       );
