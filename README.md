@@ -6,6 +6,12 @@ Preuve de concept Flutter : se connecter à un compte **Pubky** en passant par
 Elle répond à une seule question : *une application Flutter peut-elle ouvrir
 Pubky Ring, obtenir une session, et afficher les informations du compte ?*
 
+## Installer et mettre à jour
+
+Les mises à jour passent par **[Obtainium](https://github.com/ImranR98/Obtainium)**,
+qui lit les *releases* de ce dépôt — resté privé. La marche à suivre, le
+keystore et la procédure de publication sont dans [RELEASING.md](RELEASING.md).
+
 ## Ce qu'elle fait — et ne fait pas
 
 | | |
@@ -15,13 +21,16 @@ Pubky Ring, obtenir une session, et afficher les informations du compte ?*
 | ✅ | Garde la session dans le keystore — un seul passage par Ring |
 | ✅ | Lit le profil (avatar, nom, statut, bio, liens, compteurs, tags) |
 | ✅ | Lit le flux : abonnements, amis, global, favoris — avec images |
-| ❌ | N'écrit rien — pas de publication, pas de suivi, pas de tag |
+| ✅ | Rend les mentions cliquables et ouvre le profil de la personne citée |
+| ✅ | Publie un post court sur le homeserver |
+| ✅ | Embarque une page de diagnostic pour l'authentification |
+| ❌ | Pas encore : suivre, taguer, répondre, envoyer une image |
 
-**Aucune ligne de Rust.** La lecture passe par Nexus, l'indexeur public
-derrière pubky.app, dont l'API v0 ne demande aucune authentification. Écrire,
-en revanche, exigerait un pont FFI vers le crate `pubky` : le `grant_secret`
-rendu par Ring n'est pas un jeton `Bearer` utilisable tel quel, il doit être
-échangé contre un jeton court via une preuve de possession signée.
+**Aucune ligne de Rust**, y compris pour écrire. La lecture passe par Nexus,
+l'indexeur public derrière pubky.app, dont l'API v0 ne demande aucune
+authentification. L'écriture s'authentifie soit par cookie, soit — pour une
+session *grant* — en signant une preuve de possession Ed25519 et en
+l'échangeant contre un jeton porteur, ce que fait `lib/pubky/grant_auth.dart`.
 
 ## Le flux, tel qu'il est implémenté dans Ring
 
@@ -47,10 +56,15 @@ sans relais HTTP ni scrutation.
 
 ## Sécurité
 
-Le `grant_secret` est un **jeton porteur** : qui le détient agit comme
-l'utilisateur. Cette preuve de concept le garde **en mémoire seulement**, ne
-l'affiche jamais, ne le journalise pas, et le perd à la fermeture. Une vraie
-application le placerait dans le keystore Android ou la Keychain iOS.
+Le secret de session vaut mot de passe : qui le détient agit comme
+l'utilisateur. Il est gardé dans le **keystore de la plateforme**, n'est jamais
+affiché, journalisé, ni inclus dans le rapport de diagnostic — celui-ci n'en
+donne que la longueur, la forme et le nombre de segments.
+
+⚠️ **Le secret exporté n'est pas la valeur du cookie.** `export_secret()` du
+SDK rend `<clé>:<secret>` ; envoyer la chaîne entière donne
+`No authenticated session found`, qui ressemble à s'y méprendre à une session
+expirée. Voir `lib/pubky/cookie_auth.dart`.
 
 À savoir : Ring signe la session avec **son propre** identifiant applicatif.
 Côté homeserver, la session est donc indiscernable de celle de Ring et ne peut
@@ -65,13 +79,16 @@ lib/
   pubky/ring_session.dart      construction du lien et lecture du callback
   pubky/session_store.dart     session dans le keystore de la plateforme
   pubky/nexus.dart             client Nexus + modèles profil et post
+  pubky/cookie_auth.dart       découpage du secret exporté
+  pubky/grant_auth.dart        preuve de possession et échange de jeton
+  pubky/crockford.dart         identifiants horodatés des ressources
+  pubky/mentions.dart          découpage du contenu : texte, mentions, liens
+  pubky/homeserver.dart        écriture sur le homeserver
+  pubky/diagnostics.dart       sondes d'authentification
   screens/home_shell.dart      onglets Flux / Profil
-  screens/                     connexion, flux, profil
-test/
-  pubky_test.dart              hors ligne — callback Ring et profil
-  feed_test.dart               hors ligne — flux, pièces jointes, keystore
-  network_test.dart            en ligne — contre nexus.pubky.app
-  fixtures/                    réponses réelles de Nexus
+  screens/                     connexion, flux, profil, composition, diagnostic
+test/                          67 tests — hors ligne et contre le réseau réel
+  fixtures/                    réponses réelles de Nexus, non retouchées
 ```
 
 ### Points mesurés sur l'API de flux
@@ -98,8 +115,9 @@ flutter test test/network_test.dart    # touche le réseau réel
 flutter build apk --release
 ```
 
-L'APK est signé avec la clé de débogage : il s'installe directement, il n'est
-pas publiable en l'état.
+L'APK est signé avec la clé de release quand `android/key.properties` et le
+keystore sont présents, et retombe sur la clé de débogage sinon — voir
+[RELEASING.md](RELEASING.md).
 
 ## Prérequis pour l'essayer
 
