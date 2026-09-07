@@ -20,89 +20,67 @@ const _countLabels = <String, String>{
   'collections': 'Collections',
 };
 
+/// Profile tab body. The surrounding chrome (app bar, tabs) lives in the
+/// shell, so this widget is just the scrollable content.
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({
     super.key,
     required this.session,
     required this.profile,
-    required this.busy,
     required this.error,
     required this.onRefresh,
-    required this.onDisconnect,
   });
 
   final RingSession session;
   final PubkyProfile profile;
-  final bool busy;
   final String? error;
-  final VoidCallback onRefresh;
-  final VoidCallback onDisconnect;
+  final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
     final err = error;
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: kBackground,
-        title: const Text('Mon profil Pubky'),
-        actions: [
-          IconButton(
-            onPressed: busy ? null : onRefresh,
-            icon: const Icon(Icons.refresh_rounded),
-            tooltip: 'Recharger',
-          ),
-          IconButton(
-            onPressed: onDisconnect,
-            icon: const Icon(Icons.logout_rounded),
-            tooltip: 'Se déconnecter',
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async => onRefresh(),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 36),
-            children: [
-              if (err != null) ...[
-                ErrorPanel(message: err),
-                const SizedBox(height: 18),
-              ],
-              _Header(profile: profile),
-              const SizedBox(height: 18),
-              _PubkyCard(pubky: profile.id),
-              if (profile.bio != null) ...[
-                const SizedBox(height: 14),
-                Panel(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const _SectionTitle('Bio'),
-                      const SizedBox(height: 10),
-                      Text(
-                        profile.bio!,
-                        style: const TextStyle(height: 1.5, fontSize: 15),
-                      ),
-                    ],
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 36),
+        children: [
+          if (err != null) ...[
+            ErrorPanel(message: err),
+            const SizedBox(height: 18),
+          ],
+          _Header(profile: profile),
+          const SizedBox(height: 18),
+          _PubkyCard(pubky: profile.id),
+          if (profile.bio != null) ...[
+            const SizedBox(height: 14),
+            Panel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _SectionTitle('Bio'),
+                  const SizedBox(height: 10),
+                  Text(
+                    profile.bio!,
+                    style: const TextStyle(height: 1.5, fontSize: 15),
                   ),
-                ),
-              ],
-              const SizedBox(height: 14),
-              _Counts(counts: profile.counts),
-              if (profile.links.isNotEmpty) ...[
-                const SizedBox(height: 14),
-                _Links(links: profile.links),
-              ],
-              if (profile.tags.isNotEmpty) ...[
-                const SizedBox(height: 14),
-                _Tags(tags: profile.tags),
-              ],
-              const SizedBox(height: 14),
-              _SessionCard(session: session, indexedAt: profile.indexedAt),
-            ],
-          ),
-        ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
+          _Counts(counts: profile.counts),
+          if (profile.links.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            _Links(links: profile.links),
+          ],
+          if (profile.tags.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            _Tags(tags: profile.tags),
+          ],
+          const SizedBox(height: 14),
+          _SessionCard(session: session, indexedAt: profile.indexedAt),
+        ],
       ),
     );
   }

@@ -5,8 +5,9 @@ import 'package:flutter/material.dart';
 
 import 'pubky/nexus.dart';
 import 'pubky/ring_session.dart';
+import 'pubky/session_store.dart';
 import 'screens/connect_screen.dart';
-import 'screens/profile_screen.dart';
+import 'screens/home_shell.dart';
 import 'theme.dart';
 
 void main() => runApp(const FlutkyApp());
@@ -23,8 +24,8 @@ class FlutkyApp extends StatelessWidget {
       );
 }
 
-/// Holds the whole POC state machine: waiting for Ring, loading the profile,
-/// showing it, or reporting what went wrong.
+/// Holds the whole state machine: restoring a stored session, waiting for
+/// Ring, loading the profile, showing the app, or reporting what went wrong.
 class SessionGate extends StatefulWidget {
   const SessionGate({super.key});
 
@@ -35,6 +36,7 @@ class SessionGate extends StatefulWidget {
 class _SessionGateState extends State<SessionGate> {
   final _appLinks = AppLinks();
   final _nexus = NexusClient();
+  final _store = SessionStore();
   StreamSubscription<Uri>? _linkSub;
 
   /// Guards against handling the same callback twice: depending on whether the
@@ -55,13 +57,17 @@ class _SessionGateState extends State<SessionGate> {
   String? _error;
   bool _busy = false;
 
+  /// True until the keystore has been consulted — without it the connect
+  /// screen would flash before a stored session restores.
+  bool _restoring = true;
+
   @override
   void initState() {
     super.initState();
     _linkSub = _appLinks.uriLinkStream.listen(_onLink, onError: (Object e) {
       if (mounted) setState(() => _error = 'Lien entrant illisible : $e');
     });
-    unawaited(_consumeInitialLink());
+    unawaited(_bootstrap());
   }
 
   @override
@@ -71,7 +77,16 @@ class _SessionGateState extends State<SessionGate> {
     super.dispose();
   }
 
-  Future<void> _consumeInitialLink() async {
+  Future<void> _bootstrap() async {
+    final stored = await _store.read();
+    if (stored != null && mounted) {
+      setState(() => _session = stored);
+      await _loadProfile(stored.pubky);
+    }
+    if (mounted) setState(() => _restoring = false);
+
+    // A cold start triggered by Ring carries its link here rather than on the
+    // stream; handled after the restore so a fresh session wins over the old.
     final uri = await _appLinks.getInitialLink();
     if (uri != null) _onLink(uri);
   }
@@ -91,6 +106,7 @@ class _SessionGateState extends State<SessionGate> {
           _session = session;
           _error = null;
         });
+        unawaited(_store.save(session));
         unawaited(_loadProfile(session.pubky));
       case RingCancelled():
         setState(() => _error = 'Connexion annulée dans Pubky Ring.');
@@ -144,25 +160,36 @@ class _SessionGateState extends State<SessionGate> {
     }
   }
 
-  void _disconnect() => setState(() {
-        _session = null;
-        _profile = null;
-        _error = null;
-        _handledUri = null;
-      });
+  void _disconnect() {
+    unawaited(_store.clear());
+    setState(() {
+      _session = null;
+      _profile = null;
+      _error = null;
+      _handledUri = null;
+      _inbound.clear();
+      _lastOutbound = null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_restoring) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+
     final session = _session;
     final profile = _profile;
 
     if (session != null && profile != null) {
-      return ProfileScreen(
+      return HomeShell(
+        nexus: _nexus,
         session: session,
         profile: profile,
-        busy: _busy,
-        error: _error,
-        onRefresh: () => _loadProfile(session.pubky),
+        profileError: _error,
+        onRefreshProfile: () => _loadProfile(session.pubky),
         onDisconnect: _disconnect,
       );
     }

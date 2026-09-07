@@ -6,7 +6,10 @@ plugins {
 
 android {
     namespace = "fr.delvops.flutky"
-    compileSdk = flutter.compileSdkVersion
+    // flutter_secure_storage 11 ships an AAR that requires API 37; Flutter's
+    // default (36) fails :app:checkReleaseAarMetadata. AGP warns that 36 is its
+    // recommended maximum, but the dependency check is what actually blocks.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

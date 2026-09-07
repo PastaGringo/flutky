@@ -12,7 +12,9 @@ Pubky Ring, obtenir une session, et afficher les informations du compte ?*
 |---|---|
 | ✅ | Ouvre Pubky Ring par un lien `pubkyring://session` |
 | ✅ | Reçoit en retour la clé publique et un secret de session |
+| ✅ | Garde la session dans le keystore — un seul passage par Ring |
 | ✅ | Lit le profil (avatar, nom, statut, bio, liens, compteurs, tags) |
+| ✅ | Lit le flux : abonnements, amis, global, favoris — avec images |
 | ❌ | N'écrit rien — pas de publication, pas de suivi, pas de tag |
 
 **Aucune ligne de Rust.** La lecture passe par Nexus, l'indexeur public
@@ -58,16 +60,33 @@ pas être révoquée séparément.
 
 ```
 lib/
-  main.dart                    machine à états : attente, chargement, profil
+  main.dart                    machine à états : restauration, attente, app
   theme.dart                   palette et blocs partagés
   pubky/ring_session.dart      construction du lien et lecture du callback
-  pubky/nexus.dart             client Nexus + modèle de profil
-  screens/                     écran de connexion, écran de profil
+  pubky/session_store.dart     session dans le keystore de la plateforme
+  pubky/nexus.dart             client Nexus + modèles profil et post
+  screens/home_shell.dart      onglets Flux / Profil
+  screens/                     connexion, flux, profil
 test/
-  pubky_test.dart              hors ligne — parsing du callback et du profil
+  pubky_test.dart              hors ligne — callback Ring et profil
+  feed_test.dart               hors ligne — flux, pièces jointes, keystore
   network_test.dart            en ligne — contre nexus.pubky.app
-  fixtures/nexus_user.json     réponse réelle de GET /v0/user/{id}
+  fixtures/                    réponses réelles de Nexus
 ```
+
+### Points mesurés sur l'API de flux
+
+- `limit` est borné à 50 (`BoundedLimit_10_50`), `skip` pagine.
+- `observer_id` est ce qui personnalise : sans lui, `following` retombe
+  silencieusement sur la chronologie globale. Un test réseau vérifie que deux
+  observateurs obtiennent bien deux flux différents.
+- Les sources exposées (`following`, `friends`, `all`, `bookmarks`) sont celles
+  qui répondent avec un simple observateur ; `author` et `post_replies` exigent
+  des identifiants supplémentaires et rendent 400.
+- Une pièce jointe `pubky://<auteur>/pub/pubky.app/files/<id>` se lit à
+  `/static/files/<auteur>/<id>/<variante>`, avec trois variantes seulement :
+  `main` (149 ko JPEG mesurés), `feed` (7,7 ko WebP) et `small` (2,9 ko). Tout
+  autre nom rend 400.
 
 ## Développer
 
