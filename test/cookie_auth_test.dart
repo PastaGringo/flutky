@@ -1,7 +1,7 @@
 import 'package:flutky/pubky/cookie_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-const _pubky = 'w3ase343kdnbtp4y3x69qd1qyt8peyrdtkhf671ujucc9i8fge6y';
+const _pubky = 'gujx6qd8ksydh1makdphd3bxu351d9b8waqka8hfg6q7hnqkxexo';
 const _secret = 'ABCDEFGHJKMNPQRSTVWXYZ0123'; // 26 chars, base32 Crockford
 
 void main() {
@@ -45,7 +45,8 @@ void main() {
     });
 
     test('refuses a token that names a different account', () {
-      const other = 'gujx6qd8ksydh1makdphd3bxu351d9b8waqka8hfg6q7hnqkxexo';
+      const other = 'nkcct8tzquo8n4z5ysz9t963ye9kq1w7gb55aad1z4tmsgjjhmto';
+      expect(other, isNot(_pubky), reason: 'the control must differ to discriminate');
 
       expect(
         () => CookieCredential.parse('$other:$_secret', sessionPubky: _pubky),

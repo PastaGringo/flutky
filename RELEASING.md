@@ -1,26 +1,8 @@
 # Publier une version
 
-Flutky se met à jour par **Obtainium**, qui lit les *releases* du dépôt GitHub.
-Le dépôt reste **privé** : Obtainium envoie `Authorization: Token …` sur ses
-appels d'API et `Accept: application/octet-stream` pour télécharger l'APK, et
-il préfère l'URL d'API de l'asset à `browser_download_url` — c'est exactement
-ce qu'exige un dépôt privé.
-
-## Configurer Obtainium, une seule fois
-
-1. **Créer un jeton GitHub** — [Fine-grained
-   tokens](https://github.com/settings/personal-access-tokens) :
-   - *Repository access* → **Only select repositories** → `flutky`
-   - *Repository permissions* → **Contents : Read-only** (c'est ce qui donne
-     accès aux releases et à leurs fichiers)
-   - une date d'expiration, et le noter : GitHub ne le réaffichera pas
-2. **Le coller dans Obtainium** : ☰ → *Settings* → *Source-specific* →
-   *GitHub* → *Personal Access Token*
-3. **Ajouter l'app** : onglet *Add App* → URL du dépôt →
-   `https://github.com/PastaGringo/flutky` → *Add*
-
-Sans le jeton, Obtainium ne verra rien : un dépôt privé répond 404 à un appel
-anonyme, ce qui ressemble à « aucune release » plutôt qu'à un refus d'accès.
+Flutky se met à jour par **Obtainium**, qui lit les *releases* de ce dépôt.
+Le dépôt étant public, aucun jeton n'est nécessaire côté testeur — la
+procédure d'installation est dans [INSTALL.md](INSTALL.md).
 
 ## La signature ne doit jamais changer
 

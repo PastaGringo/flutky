@@ -8,9 +8,12 @@ Pubky Ring, obtenir une session, et afficher les informations du compte ?*
 
 ## Installer et mettre à jour
 
-Les mises à jour passent par **[Obtainium](https://github.com/ImranR98/Obtainium)**,
-qui lit les *releases* de ce dépôt — resté privé. La marche à suivre, le
-keystore et la procédure de publication sont dans [RELEASING.md](RELEASING.md).
+**Android uniquement** — pas de build iOS.
+
+Pour installer et tester : **[INSTALL.md](INSTALL.md)** *(in English)*. Les
+mises à jour passent par [Obtainium](https://github.com/ImranR98/Obtainium),
+qui lit les *releases* de ce dépôt. Côté publication, le keystore et la
+procédure sont dans [RELEASING.md](RELEASING.md).
 
 ## Ce qu'elle fait — et ne fait pas
 

@@ -52,25 +52,44 @@ void main() {
         '${posts.where((p) => p.attachments.isNotEmpty).length} avec pièce jointe');
   }, timeout: const Timeout(Duration(seconds: 60)));
 
-  test('the observer actually personalises the stream', () async {
-    // The trap this guards against: an ignored filter silently returns the
-    // global timeline, and "personalised" looks identical to "not filtered".
-    const other = 'nkcct8tzquo8n4z5ysz9t963ye9kq1w7gb55aad1z4tmsgjjhmto';
+  test('personalised sources genuinely require the observer', () async {
+    // The trap: an ignored `observer_id` silently returns the global timeline,
+    // and "personalised" then looks identical to "not filtered at all".
+    //
+    // Comparing feeds by content was the obvious test and it is unreliable
+    // here: the network is small enough that the ten newest posts overall are
+    // often all from accounts the user follows, so `following` and `all`
+    // legitimately coincide. Measured 2026-09-07 — they matched exactly.
+    //
+    // These two checks do not depend on what was posted lately.
+    for (final source in [FeedSource.following, FeedSource.bookmarks]) {
+      await expectLater(
+        nexus.fetchStream(source: source, limit: 10),
+        throwsA(isA<NexusError>()),
+        reason: '${source.apiValue} without an observer must be refused, '
+            'not silently answered with the global timeline',
+      );
+    }
 
-    Future<List<String>> ids(FeedSource source, String observer) async =>
-        (await nexus.fetchStream(source: source, observerId: observer, limit: 10))
-            .map((p) => p.id)
-            .toList();
+    // Bookmarks are the user's own collection: their content cannot coincide
+    // with the global timeline the way `following` can.
+    final bookmarks = await nexus.fetchStream(
+      source: FeedSource.bookmarks,
+      observerId: _knownPubky,
+      limit: 10,
+    );
+    final global = await nexus.fetchStream(
+      source: FeedSource.all,
+      observerId: _knownPubky,
+      limit: 10,
+    );
 
-    final following = await ids(FeedSource.following, _knownPubky);
-    final global = await ids(FeedSource.all, _knownPubky);
-    final otherFollowing = await ids(FeedSource.following, other);
-
-    expect(following, isNotEmpty);
-    expect(following, isNot(equals(global)),
-        reason: 'following must differ from the global timeline');
-    expect(following, isNot(equals(otherFollowing)),
-        reason: 'two observers must not get the same following stream');
+    expect(bookmarks, isNotEmpty);
+    expect(
+      bookmarks.map((p) => p.id).toList(),
+      isNot(equals(global.map((p) => p.id).toList())),
+      reason: 'a per-user source must return per-user content',
+    );
   }, timeout: const Timeout(Duration(seconds: 90)));
 
   test('resolves post authors in one batch', () async {
