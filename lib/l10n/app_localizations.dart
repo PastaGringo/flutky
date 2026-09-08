@@ -1375,18 +1375,6 @@ abstract class L10n {
   /// **'you'**
   String get postTagYours;
 
-  /// No description provided for @postInReplyToName.
-  ///
-  /// In en, this message translates to:
-  /// **'In reply to {name}'**
-  String postInReplyToName(String name);
-
-  /// No description provided for @postInReplyToUnknown.
-  ///
-  /// In en, this message translates to:
-  /// **'In reply to a post'**
-  String get postInReplyToUnknown;
-
   /// No description provided for @composeQuoteTitle.
   ///
   /// In en, this message translates to:
@@ -1410,6 +1398,18 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'QUOTING'**
   String get composeQuoting;
+
+  /// No description provided for @postThreadCollapse.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide the post being answered'**
+  String get postThreadCollapse;
+
+  /// No description provided for @postThreadExpand.
+  ///
+  /// In en, this message translates to:
+  /// **'Show the post being answered'**
+  String get postThreadExpand;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

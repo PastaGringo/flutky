@@ -366,10 +366,10 @@
   "postTagInvalidChar": "Un tag ne contient ni espace, ni virgule, ni deux-points.",
   "postTaggersTitle": "« {label} » posé par",
   "postTagYours": "toi",
-  "postInReplyToName": "En réponse à {name}",
-  "postInReplyToUnknown": "En réponse à un post",
   "composeQuoteTitle": "Citer",
   "composeQuoteHint": "Ton commentaire…",
   "composeQuotePublish": "Citer",
-  "composeQuoting": "CITATION DE"
+  "composeQuoting": "CITATION DE",
+  "postThreadCollapse": "Replier le post d'origine",
+  "postThreadExpand": "Afficher le post d'origine"
 }

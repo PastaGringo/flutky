@@ -753,14 +753,6 @@ class L10nEn extends L10n {
   String get postTagYours => 'you';
 
   @override
-  String postInReplyToName(String name) {
-    return 'In reply to $name';
-  }
-
-  @override
-  String get postInReplyToUnknown => 'In reply to a post';
-
-  @override
   String get composeQuoteTitle => 'Quote';
 
   @override
@@ -771,4 +763,10 @@ class L10nEn extends L10n {
 
   @override
   String get composeQuoting => 'QUOTING';
+
+  @override
+  String get postThreadCollapse => 'Hide the post being answered';
+
+  @override
+  String get postThreadExpand => 'Show the post being answered';
 }

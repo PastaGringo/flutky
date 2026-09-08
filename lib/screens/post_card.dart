@@ -121,6 +121,11 @@ class _PostCardState extends State<PostCard> {
   /// PUT travels would race the second against it.
   bool _busy = false;
 
+  /// The post being answered, folded away. Shown by default — reading an
+  /// answer without the question is the thing the thread rail exists to fix —
+  /// but a long parent above every reply is a lot of feed, so it folds.
+  bool _parentCollapsed = false;
+
   PubkyPost get post => _fresh ?? widget.post;
 
   /// A post the indexer has not seen has no thread and no counters yet, and a
@@ -218,6 +223,9 @@ class _PostCardState extends State<PostCard> {
       uiLanguage: Localizations.localeOf(context).languageCode,
       deepLKey: PreferencesScope.maybeOf(context)?.deepLKey ?? '',
       parent: post.uri,
+      // Answering something you cannot re-read while writing is guesswork.
+      quotedPost: post,
+      quotedAuthor: widget.profiles[post.author],
     );
     if (published == null) return;
 
@@ -440,16 +448,19 @@ class _PostCardState extends State<PostCard> {
                 ],
               ),
             ),
-          // A reply names what it answers with an arrow rather than a framed
-          // copy of the parent: one line, and a tap to go read it.
-          if (!hideQuote && post.isReply)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _ReplyArrow(
-                parent: quoted,
-                parentAuthor: quotedAuthor,
-                onTap: session == null ? null : _openQuoted,
-              ),
+          // A reply carries the post it answers above it, joined by a rail
+          // down the left: the link is drawn rather than described, which is
+          // what makes a timeline of answers readable at a glance.
+          if (!hideQuote && post.isReply && quoted != null)
+            _ParentThread(
+              parent: quoted,
+              author: quotedAuthor,
+              nexus: nexus,
+              profiles: profiles,
+              collapsed: _parentCollapsed,
+              onToggle: () =>
+                  setState(() => _parentCollapsed = !_parentCollapsed),
+              onOpen: session == null ? null : _openQuoted,
             ),
           _Header(
             post: post,
@@ -535,62 +546,246 @@ class _PostCardState extends State<PostCard> {
   }
 }
 
-/// The one line that says what a reply answers.
+/// The post a reply answers, drawn above it and joined to it by a rail.
 ///
-/// It replaced a framed copy of the parent under every reply: in a feed where
-/// half the cards are answers, that block doubled the height of the timeline
-/// to repeat something one tap away — and, whenever the parent had not been
-/// loaded, announced it was unavailable, which was both false and alarming.
-class _ReplyArrow extends StatelessWidget {
-  const _ReplyArrow({
+/// This replaced two earlier attempts, both wrong in the same way: a framed
+/// copy of the parent *under* the answer, then a line of text naming its
+/// author. Both said which post was being answered; neither showed it. A rail
+/// down the left gutter, curving into the card below, is read without being
+/// read — which is the whole point in a timeline where half the cards are
+/// answers.
+///
+/// The parent is shown whole, not excerpted: an answer to a truncated
+/// question is as good as an answer to nothing. It folds away instead, for
+/// when the feed gets long.
+class _ParentThread extends StatelessWidget {
+  const _ParentThread({
     required this.parent,
-    required this.parentAuthor,
-    required this.onTap,
+    required this.author,
+    required this.nexus,
+    required this.profiles,
+    required this.collapsed,
+    required this.onToggle,
+    required this.onOpen,
   });
 
-  final PubkyPost? parent;
-  final PubkyProfile? parentAuthor;
-  final VoidCallback? onTap;
+  final PubkyPost parent;
+  final PubkyProfile? author;
+  final NexusClient nexus;
+  final Map<String, PubkyProfile> profiles;
+  final bool collapsed;
+  final VoidCallback onToggle;
+  final VoidCallback? onOpen;
+
+  /// Width of the gutter the rail lives in. The rail sits at its centre and
+  /// curves right into the card below.
+  static const _gutter = 30.0;
 
   @override
   Widget build(BuildContext context) {
     final l = L10n.of(context);
-    final author = parent?.author;
-    final text = author == null
-        ? l.postInReplyToUnknown
-        : l.postInReplyToName(PostCard.displayName(parentAuthor, author, l));
 
-    // Tappable even when the parent has not loaded: the URI is enough to open
-    // it, and the screen it lands on can fetch what this card could not.
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.subdirectory_arrow_right_rounded,
-              size: 15,
-              color: kTextMuted,
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: _gutter,
+            child: Column(
+              children: [
+                Tooltip(
+                  message: collapsed ? l.postThreadExpand : l.postThreadCollapse,
+                  child: InkWell(
+                    onTap: onToggle,
+                    borderRadius: BorderRadius.circular(999),
+                    child: Padding(
+                      padding: const EdgeInsets.all(3),
+                      child: Icon(
+                        collapsed
+                            ? Icons.add_circle_outline_rounded
+                            : Icons.remove_circle_outline_rounded,
+                        size: 17,
+                        color: kTextMuted,
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: CustomPaint(
+                    painter: _RailPainter(),
+                    size: Size.infinite,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                text,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: onTap == null ? kTextMuted : kAccent,
-                  fontSize: 12,
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: InkWell(
+                onTap: onOpen,
+                borderRadius: BorderRadius.circular(12),
+                child: CustomPaint(
+                  painter: _DashedBorderPainter(),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: _ParentBody(
+                      post: parent,
+                      author: author,
+                      nexus: nexus,
+                      profiles: profiles,
+                      collapsed: collapsed,
+                    ),
+                  ),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
+}
+
+class _ParentBody extends StatelessWidget {
+  const _ParentBody({
+    required this.post,
+    required this.author,
+    required this.nexus,
+    required this.profiles,
+    required this.collapsed,
+  });
+
+  final PubkyPost post;
+  final PubkyProfile? author;
+  final NexusClient nexus;
+  final Map<String, PubkyProfile> profiles;
+  final bool collapsed;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = L10n.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            ClipOval(
+              child: Image.network(
+                '$nexusBase/static/avatar/${post.author}',
+                width: 22,
+                height: 22,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => const Icon(
+                  Icons.person_rounded,
+                  size: 18,
+                  color: kTextMuted,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                PostCard.displayName(author, post.author, l),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Text(
+              PostCard.relativeTime(l, post.indexedAt),
+              style: const TextStyle(color: kTextMuted, fontSize: 11),
+            ),
+          ],
+        ),
+        if (!collapsed) ...[
+          if (post.article case final article?) ...[
+            const SizedBox(height: 8),
+            _Article(article: article, compact: true),
+          ] else if (post.content.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            // Whole, not excerpted: this is the question the card answers.
+            PostContent(
+              content: post.content,
+              nexus: nexus,
+              knownProfiles: profiles,
+            ),
+          ],
+          if (post.imageUrls().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _Images(urls: post.imageUrls(), height: 150),
+          ],
+        ],
+      ],
+    );
+  }
+}
+
+/// The line joining a parent to the answer below it: down the gutter, then a
+/// quarter turn into the card.
+class _RailPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = kBorder
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    const radius = 10.0;
+    final x = size.width / 2;
+    final path = Path()
+      ..moveTo(x, 0)
+      ..lineTo(x, size.height - radius)
+      ..arcToPoint(
+        Offset(x + radius, size.height),
+        radius: const Radius.circular(radius),
+        clockwise: false,
+      )
+      ..lineTo(size.width, size.height);
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(_RailPainter oldDelegate) => false;
+}
+
+/// A dashed frame, which is how pubky.app tells a quoted parent from a card of
+/// its own — a solid border would read as another post in the timeline.
+class _DashedBorderPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = kBorder
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
+
+    final rect = RRect.fromRectAndRadius(
+      Offset.zero & size,
+      const Radius.circular(12),
+    );
+
+    // Walked rather than drawn in one go: Flutter has no dash phase, so the
+    // outline is measured and cut into segments.
+    const dash = 5.0;
+    const gap = 4.0;
+    for (final metric in (Path()..addRRect(rect)).computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        final end = (distance + dash).clamp(0.0, metric.length);
+        canvas.drawPath(metric.extractPath(distance, end), paint);
+        distance = end + gap;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedBorderPainter oldDelegate) => false;
 }
 
 class _Header extends StatelessWidget {

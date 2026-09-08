@@ -90,7 +90,7 @@ void main() {
       ));
 
   group('A reply', () {
-    testWidgets('says what it answers with an arrow, not with a copy of it',
+    testWidgets('shows the post it answers, whole, joined by a rail',
         (tester) async {
       await tester.pumpWidget(card(
         subject: post(
@@ -100,15 +100,32 @@ void main() {
         quoted: parent,
       ));
 
-      expect(find.text('En réponse à Pasta'), findsOneWidget);
-      expect(find.byIcon(Icons.subdirectory_arrow_right_rounded),
-          findsOneWidget);
-      // The framed block is what the arrow replaced: repeating the parent
-      // under every answer doubled the height of the feed.
-      expect(find.text('Le post visé'), findsNothing);
+      // The question is on screen with the answer — excerpting it would make
+      // the answer as good as an answer to nothing.
+      expect(find.text('Le post visé'), findsOneWidget);
+      expect(find.text('Ma réponse'), findsOneWidget);
+      // And the fold control that comes with the rail.
+      expect(find.byIcon(Icons.remove_circle_outline_rounded), findsOneWidget);
     });
 
-    testWidgets('names the post even when the parent could not be loaded',
+    testWidgets('folds the parent away, keeping its author', (tester) async {
+      await tester.pumpWidget(card(
+        subject: post(
+          content: 'Ma réponse',
+          repliedUri: 'pubky://$me/pub/pubky.app/posts/0035NTF47R7C0',
+        ),
+        quoted: parent,
+      ));
+
+      await tester.tap(find.byIcon(Icons.remove_circle_outline_rounded));
+      await tester.pump();
+
+      expect(find.text('Le post visé'), findsNothing);
+      expect(find.text('Pasta'), findsOneWidget, reason: 'who is answered');
+      expect(find.byIcon(Icons.add_circle_outline_rounded), findsOneWidget);
+    });
+
+    testWidgets('says nothing at all when the parent has not loaded',
         (tester) async {
       await tester.pumpWidget(card(
         subject: post(
@@ -118,11 +135,11 @@ void main() {
 
       // Never « original post unavailable », which was both false and
       // alarming: the post exists, this card simply has not fetched it.
-      expect(find.text('En réponse à un post'), findsOneWidget);
       expect(find.textContaining('indisponible'), findsNothing);
+      expect(find.byIcon(Icons.remove_circle_outline_rounded), findsNothing);
     });
 
-    testWidgets('drops the arrow inside a thread, where the parent is above',
+    testWidgets('drops the rail inside a thread, where the parent is above',
         (tester) async {
       await tester.pumpWidget(card(
         subject: post(
@@ -132,7 +149,8 @@ void main() {
         hideQuote: true,
       ));
 
-      expect(find.byIcon(Icons.subdirectory_arrow_right_rounded), findsNothing);
+      expect(find.text('Le post visé'), findsNothing);
+      expect(find.byIcon(Icons.remove_circle_outline_rounded), findsNothing);
     });
   });
 
@@ -146,9 +164,10 @@ void main() {
         quoted: parent,
       ));
 
-      // A quote is about the post it carries, so that one stays on screen.
+      // A quote is about the post it carries, so that one stays on screen —
+      // in its solid frame, not behind the dashed one a reply gets.
       expect(find.text('Le post visé'), findsOneWidget);
-      expect(find.byIcon(Icons.subdirectory_arrow_right_rounded), findsNothing);
+      expect(find.byIcon(Icons.remove_circle_outline_rounded), findsNothing);
     });
   });
 

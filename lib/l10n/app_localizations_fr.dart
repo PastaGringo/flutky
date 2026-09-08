@@ -754,14 +754,6 @@ class L10nFr extends L10n {
   String get postTagYours => 'toi';
 
   @override
-  String postInReplyToName(String name) {
-    return 'En réponse à $name';
-  }
-
-  @override
-  String get postInReplyToUnknown => 'En réponse à un post';
-
-  @override
   String get composeQuoteTitle => 'Citer';
 
   @override
@@ -772,4 +764,10 @@ class L10nFr extends L10n {
 
   @override
   String get composeQuoting => 'CITATION DE';
+
+  @override
+  String get postThreadCollapse => 'Replier le post d\'origine';
+
+  @override
+  String get postThreadExpand => 'Afficher le post d\'origine';
 }

@@ -425,17 +425,10 @@
     }
   },
   "postTagYours": "you",
-  "postInReplyToName": "In reply to {name}",
-  "@postInReplyToName": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "postInReplyToUnknown": "In reply to a post",
   "composeQuoteTitle": "Quote",
   "composeQuoteHint": "Your comment…",
   "composeQuotePublish": "Quote",
-  "composeQuoting": "QUOTING"
+  "composeQuoting": "QUOTING",
+  "postThreadCollapse": "Hide the post being answered",
+  "postThreadExpand": "Show the post being answered"
 }

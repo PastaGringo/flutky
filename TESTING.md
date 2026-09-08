@@ -2,7 +2,7 @@
 
 ## À tester (récents en haut)
 
-### feat: tags, repost, citation, flèche de réponse — v0.16.0 — 2026-09-08
+### feat: tags, repost, citation, fil de discussion — v0.17.0 — 2026-09-08
 
 - [ ] **Où** : n'importe quelle carte, rangée d'icônes en bas
   - **Étape** : les regarder
@@ -42,10 +42,22 @@
     post publié porte ton texte au-dessus de l'encart du post cité.
 
 - [ ] **Où** : le flux, une réponse de quelqu'un
-  - **Étape** : regarder au-dessus du nom de l'auteur
-  - **Attendu** : une ligne « ↳ En réponse à *Nom* » en vert, et **plus
-    d'encart** reprenant le post d'origine sous la réponse. La toucher ouvre
-    le post auquel elle répond.
+  - **Étape** : regarder au-dessus de la carte
+  - **Attendu** : le post d'origine est affiché **en entier** dans un encadré
+    en **pointillés**, relié à la réponse par un trait qui descend à gauche et
+    s'incurve vers la carte. Plus d'encart **sous** la réponse. Toucher
+    l'encadré ouvre le post d'origine.
+
+- [ ] **Où** : la même réponse, bouton ⊖ à gauche sur le trait
+  - **Étape** : le toucher
+  - **Attendu** : le post d'origine se replie, son auteur reste visible, le
+    bouton devient ⊕ et le rétablit.
+
+- [ ] **Où** : bouton *Répondre* d'une carte
+  - **Étape** : ouvrir la fenêtre d'écriture
+  - **Attendu** : le post auquel on répond est affiché **dans la fenêtre**,
+    sous « EN RÉPONSE À ». Avant, la fenêtre le recouvrait et il fallait
+    écrire de mémoire.
 
 - [ ] **Où** : l'écran d'un post
   - **Étape** : chercher le gros bouton *Répondre* en bas

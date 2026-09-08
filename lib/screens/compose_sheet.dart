@@ -511,7 +511,11 @@ class _ComposeSheetState extends State<_ComposeSheet> {
           ],
           if (widget.quotedPost case final quoted?) ...[
             const SizedBox(height: 12),
-            _QuotedPreview(post: quoted, author: widget.quotedAuthor),
+            _QuotedPreview(
+              post: quoted,
+              author: widget.quotedAuthor,
+              replying: widget.parent != null,
+            ),
           ],
           const SizedBox(height: 12),
           TextField(
@@ -625,15 +629,25 @@ class _AccessBadge extends StatelessWidget {
   }
 }
 
-/// What a quote is about to carry, shown while it is being written.
+/// The post this one answers or quotes, shown while it is being written.
 ///
-/// Deliberately flat — a name and the words, no images, no counters: the point
-/// is to remember what you are answering, not to render the post twice.
+/// Writing an answer to something you cannot re-read is guesswork, and the
+/// sheet used to cover the post it was answering. Deliberately flat — a name
+/// and the words, no images, no counters — and capped at six lines: the sheet
+/// shares the screen with a keyboard, so a long parent would push the text
+/// field off the bottom.
 class _QuotedPreview extends StatelessWidget {
-  const _QuotedPreview({required this.post, required this.author});
+  const _QuotedPreview({
+    required this.post,
+    required this.author,
+    required this.replying,
+  });
 
   final PubkyPost post;
   final PubkyProfile? author;
+
+  /// Answering it rather than quoting it — same block, different word.
+  final bool replying;
 
   @override
   Widget build(BuildContext context) {
@@ -652,7 +666,7 @@ class _QuotedPreview extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            l.composeQuoting,
+            replying ? l.postInReplyTo : l.composeQuoting,
             style: const TextStyle(
               color: kTextMuted,
               fontSize: 11,
@@ -670,7 +684,7 @@ class _QuotedPreview extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               text,
-              maxLines: 3,
+              maxLines: 6,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 12.5,

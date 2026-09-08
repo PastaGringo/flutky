@@ -38,6 +38,7 @@ and building for iOS needs macOS.
 | ✅ | **Tagging** a post — tap a label to add or remove yours, long-press to see who else applied it |
 | ✅ | **Reposting**, as-is or as a quote with your own words on top |
 | ✅ | Reply, repost and tag on every card, each carrying its own counter |
+| ✅ | Replies drawn as a thread: the post being answered sits above, whole, joined by a rail down the left and foldable |
 | ✅ | Translating **any** post, not only your own draft |
 | ✅ | Tapping a picture to see it full screen, zoomable |
 | ✅ | Built-in diagnostics for the authentication path |
@@ -161,6 +162,27 @@ Measured on sixteen real reposts rather than guessed: pubky.app writes
 `kind: "short"` inside the embed **whatever the original is**. An article, a
 video and an image all came back as `short`. Copying the real kind would be
 more accurate and less compatible, so this follows the network.
+
+## Showing what an answer answers
+
+Three attempts, and only the third works. First a framed copy of the parent
+*under* the reply, which doubled the height of a feed where half the cards are
+answers — and announced "original post unavailable" whenever it had not been
+fetched, which was false and alarming. Then a line of text naming the author,
+`↳ In reply to Someone`: honest, compact, and still making the reader hold two
+cards in their head to connect them.
+
+What works is the shape pubky.app uses: the parent above, in a **dashed** frame
+so it cannot be mistaken for a card of its own, joined to the answer by a rail
+down the left gutter that curves into it. The link is seen rather than read.
+
+The parent is shown **whole**. An answer to a truncated question is as good as
+an answer to nothing — so it folds away instead, from the ⊖ on the rail, for
+when the feed gets long.
+
+The same block, flat and capped at six lines, now sits in the compose sheet
+while a reply is being written. It was missing: the sheet covered the post it
+was answering, and one wrote from memory.
 
 ## A thread is a tree, one level at a time
 
