@@ -8,6 +8,7 @@ import 'cookie_auth.dart';
 import 'crockford.dart';
 import 'grant_auth.dart';
 import 'ring_session.dart';
+import 'tags.dart';
 
 /// The homeserver this proof of concept writes to.
 ///
@@ -156,11 +157,13 @@ class HomeserverClient {
     String content, {
     List<String> attachments = const [],
     String? parent,
+    String? embed,
   }) async {
     final trimmed = content.trim();
-    // A picture is content: only a post with neither text nor attachment is
-    // empty.
-    if (trimmed.isEmpty && attachments.isEmpty) {
+    // A picture is content, and so is an embed: only a post with neither
+    // text, attachment nor embed is empty. A bare repost is exactly that —
+    // no words, pointing at someone else's post.
+    if (trimmed.isEmpty && attachments.isEmpty && embed == null) {
       throw ArgumentError('Un post vide ne peut pas être publié.');
     }
     if (trimmed.length > maxShortPostLength) {
@@ -187,6 +190,12 @@ class HomeserverClient {
             // one rather than assumed — I had spent weeks believing replies
             // were blocked on a hash they never needed.
             'parent': ?parent,
+            // A repost points at what it shares through `embed`. Measured on
+            // sixteen real reposts: pubky.app writes `kind: "short"` in the
+            // embed whatever the original is — an article, a video and an
+            // image all came back as `short`. Copying the real kind would be
+            // more accurate and less compatible; this follows the network.
+            if (embed != null) 'embed': {'kind': 'short', 'uri': embed},
           })),
         )
         .timeout(_timeout);
@@ -273,6 +282,79 @@ class HomeserverClient {
       throw WriteFailed(res.statusCode, _shorten(res.body));
     }
   }
+
+  /// Applies a label to a post.
+  ///
+  /// The resource id is derived from what it says —
+  /// `Crockford(BLAKE3("uri:label")[..16])` — so tagging twice writes the same
+  /// file rather than two, and removing it is a DELETE on a path both sides
+  /// compute.
+  /// Proven against pubky-app-specs' vector and against three tags published
+  /// by other clients, read back at the derived path.
+  ///
+  /// Returns the id, which the caller needs for nothing except deleting it
+  /// without recomputing.
+  Future<String> tagPost({required String uri, required String label}) async {
+    final clean = sanitizeTagLabel(label);
+    final problem = tagLabelProblem(clean);
+    if (problem != null) {
+      throw ArgumentError(switch (problem) {
+        'empty' => 'Un tag vide ne peut pas être publié.',
+        'tooLong' =>
+          'Un tag est limité à $maxTagLabelLength caractères '
+              '(${clean.runes.length} ici).',
+        _ => 'Un tag ne peut pas contenir « , » « : » ni d\'espace.',
+      });
+    }
+
+    final id = tagId(uri, clean);
+    final res = await _client
+        .put(
+          _entry('/pub/pubky.app/tags/$id'),
+          headers: {
+            ...await _authHeaders(),
+            'Content-Type': 'application/json',
+          },
+          body: utf8.encode(jsonEncode({
+            'uri': uri,
+            'label': clean,
+            // Microseconds, like every other created_at on the network —
+            // measured on real tag records rather than assumed.
+            'created_at': DateTime.now().toUtc().microsecondsSinceEpoch,
+          })),
+        )
+        .timeout(_timeout);
+
+    if (res.statusCode == 401 || res.statusCode == 403) {
+      throw WriteUnauthorized(res.statusCode, _shorten(res.body), authKind);
+    }
+    if (res.statusCode != 200 && res.statusCode != 201) {
+      throw WriteFailed(res.statusCode, _shorten(res.body));
+    }
+    return id;
+  }
+
+  /// Removes a label this account applied. Deleting one that is not there is
+  /// not an error worth surfacing — the end state is the one asked for.
+  Future<void> untagPost({required String uri, required String label}) async {
+    final id = tagId(uri, sanitizeTagLabel(label));
+    final res = await _client
+        .delete(_entry('/pub/pubky.app/tags/$id'), headers: await _authHeaders())
+        .timeout(_timeout);
+
+    if (res.statusCode == 401 || res.statusCode == 403) {
+      throw WriteUnauthorized(res.statusCode, _shorten(res.body), authKind);
+    }
+    if (res.statusCode >= 400 && res.statusCode != 404) {
+      throw WriteFailed(res.statusCode, _shorten(res.body));
+    }
+  }
+
+  /// Shares a post as-is: an ordinary post with no words of its own, pointing
+  /// at another through `embed`. With words it would be a quote, which is the
+  /// same write with content — hence no second method.
+  Future<String> repost(String postUri) =>
+      createShortPost('', embed: postUri);
 
   /// Follows an account.
   ///
