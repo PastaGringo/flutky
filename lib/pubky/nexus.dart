@@ -91,6 +91,7 @@ class ProfileTag {
     required this.label,
     required this.taggersCount,
     this.taggers = const [],
+    this.appliedByViewer = false,
   });
 
   final String label;
@@ -100,6 +101,12 @@ class ProfileTag {
   /// auditable rather than a number — and lets a single tagger be named.
   final List<String> taggers;
 
+  /// Whether the account passed as `viewer_id` applied this label. Nexus
+  /// serves it as `relationship`, and only fills it when a viewer was given —
+  /// so, like [PubkyProfile.followedByViewer], false means "not as far as we
+  /// know" rather than "certainly not".
+  final bool appliedByViewer;
+
   factory ProfileTag.fromJson(Map<String, dynamic> json) => ProfileTag(
         label: json['label']?.toString() ?? '',
         taggersCount: (json['taggers_count'] as num?)?.toInt() ?? 0,
@@ -108,6 +115,7 @@ class ProfileTag {
                 .where((e) => e.isNotEmpty)
                 .toList() ??
             const [],
+        appliedByViewer: (json['relationship'] as bool?) ?? false,
       );
 }
 
@@ -212,6 +220,10 @@ class PubkyPost {
   bool get isRepost => repostedUri != null;
   bool get isReply => repliedUri != null;
 
+  /// This post's own `pubky://` URI — what a tag, a reply or a repost has to
+  /// point at.
+  String get uri => 'pubky://$author/pub/pubky.app/posts/$id';
+
   /// True when the repost carries words of its own — a quote rather than a
   /// bare share. Worth distinguishing: a quote deserves its own text on top.
   bool get isQuote => isRepost && content.trim().isNotEmpty;
@@ -302,7 +314,7 @@ class NexusError implements Exception {
   final String body;
 
   @override
-  String toString() => 'Nexus answered $status\u00A0: $body';
+  String toString() => 'Nexus answered $status : $body';
 }
 
 class NexusClient {
@@ -472,11 +484,18 @@ class NexusClient {
     return out;
   }
 
-  /// Reads a single post — used to show what a repost or a reply points at.
-  Future<PubkyPost?> fetchPost(String author, String id) async {
+  /// Reads a single post — used to show what a repost or a reply points at,
+  /// and to read a post back after writing to it.
+  ///
+  /// [viewerId] is what fills `tags[].relationship`, the flag saying whether
+  /// the viewer applied a label. Without it every chip comes back as somebody
+  /// else's, and a tag the user just added looks like it was not applied.
+  Future<PubkyPost?> fetchPost(String author, String id,
+      {String? viewerId}) async {
     try {
       final res = await _client
-          .get(Uri.parse('$nexusBase/v0/post/$author/$id'))
+          .get(Uri.parse('$nexusBase/v0/post/$author/$id')
+              .replace(queryParameters: {'viewer_id': ?viewerId}))
           .timeout(_timeout);
       if (res.statusCode != 200) return null;
       final decoded = jsonDecode(utf8.decode(res.bodyBytes));
