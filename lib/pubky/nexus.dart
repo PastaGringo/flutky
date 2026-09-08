@@ -314,7 +314,7 @@ class NexusError implements Exception {
   final String body;
 
   @override
-  String toString() => 'Nexus answered $status : $body';
+  String toString() => 'Nexus answered $status\u00A0: $body';
 }
 
 class NexusClient {

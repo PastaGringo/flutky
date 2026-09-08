@@ -1260,6 +1260,156 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Translated by DeepL — tap the arrow for the original'**
   String get postTranslatedBy;
+
+  /// No description provided for @postActionRepost.
+  ///
+  /// In en, this message translates to:
+  /// **'Repost'**
+  String get postActionRepost;
+
+  /// No description provided for @postActionTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Tag'**
+  String get postActionTag;
+
+  /// No description provided for @postShareTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Share this post'**
+  String get postShareTitle;
+
+  /// No description provided for @postShareRepost.
+  ///
+  /// In en, this message translates to:
+  /// **'Repost'**
+  String get postShareRepost;
+
+  /// No description provided for @postShareRepostNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Share it as it is, with no words of your own.'**
+  String get postShareRepostNote;
+
+  /// No description provided for @postShareQuote.
+  ///
+  /// In en, this message translates to:
+  /// **'Quote'**
+  String get postShareQuote;
+
+  /// No description provided for @postShareQuoteNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Share it with a comment on top.'**
+  String get postShareQuoteNote;
+
+  /// No description provided for @postReposted.
+  ///
+  /// In en, this message translates to:
+  /// **'Reposted.'**
+  String get postReposted;
+
+  /// No description provided for @postReplyPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply published.'**
+  String get postReplyPublished;
+
+  /// No description provided for @postTagTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a tag'**
+  String get postTagTitle;
+
+  /// No description provided for @postTagHint.
+  ///
+  /// In en, this message translates to:
+  /// **'one word, {max} characters max'**
+  String postTagHint(int max);
+
+  /// No description provided for @postTagAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Tag'**
+  String get postTagAdd;
+
+  /// No description provided for @postTagApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Tagged « {label} ».'**
+  String postTagApplied(String label);
+
+  /// No description provided for @postTagRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Tag « {label} » removed.'**
+  String postTagRemoved(String label);
+
+  /// No description provided for @postTagEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'A tag cannot be empty.'**
+  String get postTagEmpty;
+
+  /// No description provided for @postTagTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'A tag is limited to {max} characters.'**
+  String postTagTooLong(int max);
+
+  /// No description provided for @postTagInvalidChar.
+  ///
+  /// In en, this message translates to:
+  /// **'A tag holds no space, comma or colon.'**
+  String get postTagInvalidChar;
+
+  /// No description provided for @postTaggersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'« {label} » applied by'**
+  String postTaggersTitle(String label);
+
+  /// No description provided for @postTagYours.
+  ///
+  /// In en, this message translates to:
+  /// **'you'**
+  String get postTagYours;
+
+  /// No description provided for @postInReplyToName.
+  ///
+  /// In en, this message translates to:
+  /// **'In reply to {name}'**
+  String postInReplyToName(String name);
+
+  /// No description provided for @postInReplyToUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'In reply to a post'**
+  String get postInReplyToUnknown;
+
+  /// No description provided for @composeQuoteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quote'**
+  String get composeQuoteTitle;
+
+  /// No description provided for @composeQuoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your comment…'**
+  String get composeQuoteHint;
+
+  /// No description provided for @composeQuotePublish.
+  ///
+  /// In en, this message translates to:
+  /// **'Quote'**
+  String get composeQuotePublish;
+
+  /// No description provided for @composeQuoting.
+  ///
+  /// In en, this message translates to:
+  /// **'QUOTING'**
+  String get composeQuoting;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

@@ -11,6 +11,7 @@ import '../pubky/nexus.dart';
 import '../pubky/translation.dart';
 import '../pubky/ring_session.dart';
 import '../theme.dart';
+import 'post_card.dart';
 
 /// What a successful publish hands back: enough to render the post before the
 /// indexer has seen it.
@@ -43,6 +44,14 @@ Future<PublishedPost?> showComposeSheet(
   ({String pubky, String name})? initialMention,
   /// The `pubky://` URI this post answers, when it is a reply.
   String? parent,
+  /// The `pubky://` URI this post shares, when it is a quote. A repost with
+  /// words is exactly that: an ordinary post carrying an `embed`.
+  String? quote,
+  /// What is being quoted, so the sheet can show it. Passed in rather than
+  /// fetched: the card that opened the sheet already has it, and a spinner
+  /// over something already on screen would be absurd.
+  PubkyPost? quotedPost,
+  PubkyProfile? quotedAuthor,
 }) =>
     showModalBottomSheet<PublishedPost>(
       context: context,
@@ -60,6 +69,9 @@ Future<PublishedPost?> showComposeSheet(
         initialContent: initialContent,
         initialMention: initialMention,
         parent: parent,
+        quote: quote,
+        quotedPost: quotedPost,
+        quotedAuthor: quotedAuthor,
       ),
     );
 
@@ -72,6 +84,9 @@ class _ComposeSheet extends StatefulWidget {
     required this.initialContent,
     required this.initialMention,
     required this.parent,
+    required this.quote,
+    required this.quotedPost,
+    required this.quotedAuthor,
   });
 
   final RingSession session;
@@ -81,6 +96,9 @@ class _ComposeSheet extends StatefulWidget {
   final String initialContent;
   final ({String pubky, String name})? initialMention;
   final String? parent;
+  final String? quote;
+  final PubkyPost? quotedPost;
+  final PubkyProfile? quotedAuthor;
 
   @override
   State<_ComposeSheet> createState() => _ComposeSheetState();
@@ -363,6 +381,7 @@ class _ComposeSheetState extends State<_ComposeSheet> {
         content,
         attachments: attachments,
         parent: widget.parent,
+        embed: widget.quote,
       );
 
       // The 201 alone is not proof: read it back from the homeserver, which
@@ -410,7 +429,11 @@ class _ComposeSheetState extends State<_ComposeSheet> {
           Row(
             children: [
               Text(
-                widget.parent == null ? l.composeTitle : l.composeReplyTitle,
+                switch ((widget.parent, widget.quote)) {
+                  (final String _, _) => l.composeReplyTitle,
+                  (_, final String _) => l.composeQuoteTitle,
+                  _ => l.composeTitle,
+                },
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 17),
               ),
               const Spacer(),
@@ -486,6 +509,10 @@ class _ComposeSheetState extends State<_ComposeSheet> {
               style: const TextStyle(color: kTextMuted, fontSize: 12),
             ),
           ],
+          if (widget.quotedPost case final quoted?) ...[
+            const SizedBox(height: 12),
+            _QuotedPreview(post: quoted, author: widget.quotedAuthor),
+          ],
           const SizedBox(height: 12),
           TextField(
             controller: _controller,
@@ -496,8 +523,11 @@ class _ComposeSheetState extends State<_ComposeSheet> {
             onChanged: (_) => setState(() {}),
             style: const TextStyle(fontSize: 15.5, height: 1.5),
             decoration: InputDecoration(
-              hintText:
-                  widget.parent == null ? l.composeHint : l.composeReplyHint,
+              hintText: switch ((widget.parent, widget.quote)) {
+                (final String _, _) => l.composeReplyHint,
+                (_, final String _) => l.composeQuoteHint,
+                _ => l.composeHint,
+              },
               hintStyle: const TextStyle(color: kTextMuted),
               filled: true,
               fillColor: kBackground,
@@ -548,9 +578,11 @@ class _ComposeSheetState extends State<_ComposeSheet> {
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : Text(widget.parent == null
-                    ? l.composePublish
-                    : l.composeReplyPublish),
+                : Text(switch ((widget.parent, widget.quote)) {
+                    (final String _, _) => l.composeReplyPublish,
+                    (_, final String _) => l.composeQuotePublish,
+                    _ => l.composePublish,
+                  }),
           ),
           const SizedBox(height: 10),
           Text(
@@ -589,6 +621,66 @@ class _AccessBadge extends StatelessWidget {
         border: Border.all(color: color.withValues(alpha: 0.45)),
       ),
       child: Text(label, style: TextStyle(color: color, fontSize: 11.5)),
+    );
+  }
+}
+
+/// What a quote is about to carry, shown while it is being written.
+///
+/// Deliberately flat — a name and the words, no images, no counters: the point
+/// is to remember what you are answering, not to render the post twice.
+class _QuotedPreview extends StatelessWidget {
+  const _QuotedPreview({required this.post, required this.author});
+
+  final PubkyPost post;
+  final PubkyProfile? author;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = L10n.of(context);
+    final text = post.article?.title ?? post.content;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: kBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: kBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l.composeQuoting,
+            style: const TextStyle(
+              color: kTextMuted,
+              fontSize: 11,
+              letterSpacing: 0.3,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            PostCard.displayName(author, post.author, l),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+          ),
+          if (text.trim().isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              text,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 12.5,
+                height: 1.45,
+                color: kTextMuted,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

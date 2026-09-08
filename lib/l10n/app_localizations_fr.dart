@@ -683,4 +683,93 @@ class L10nFr extends L10n {
   @override
   String get postTranslatedBy =>
       'Traduit par DeepL — touche la flèche pour l\'original';
+
+  @override
+  String get postActionRepost => 'Reposter';
+
+  @override
+  String get postActionTag => 'Tagger';
+
+  @override
+  String get postShareTitle => 'Partager ce post';
+
+  @override
+  String get postShareRepost => 'Reposter';
+
+  @override
+  String get postShareRepostNote =>
+      'Le partager tel quel, sans ajouter de mots.';
+
+  @override
+  String get postShareQuote => 'Citer';
+
+  @override
+  String get postShareQuoteNote => 'Le partager avec un commentaire au-dessus.';
+
+  @override
+  String get postReposted => 'Reposté.';
+
+  @override
+  String get postReplyPublished => 'Réponse publiée.';
+
+  @override
+  String get postTagTitle => 'Ajouter un tag';
+
+  @override
+  String postTagHint(int max) {
+    return 'un mot, $max caractères maximum';
+  }
+
+  @override
+  String get postTagAdd => 'Tagger';
+
+  @override
+  String postTagApplied(String label) {
+    return 'Tagué « $label ».';
+  }
+
+  @override
+  String postTagRemoved(String label) {
+    return 'Tag « $label » retiré.';
+  }
+
+  @override
+  String get postTagEmpty => 'Un tag ne peut pas être vide.';
+
+  @override
+  String postTagTooLong(int max) {
+    return 'Un tag est limité à $max caractères.';
+  }
+
+  @override
+  String get postTagInvalidChar =>
+      'Un tag ne contient ni espace, ni virgule, ni deux-points.';
+
+  @override
+  String postTaggersTitle(String label) {
+    return '« $label » posé par';
+  }
+
+  @override
+  String get postTagYours => 'toi';
+
+  @override
+  String postInReplyToName(String name) {
+    return 'En réponse à $name';
+  }
+
+  @override
+  String get postInReplyToUnknown => 'En réponse à un post';
+
+  @override
+  String get composeQuoteTitle => 'Citer';
+
+  @override
+  String get composeQuoteHint => 'Ton commentaire…';
+
+  @override
+  String get composeQuotePublish => 'Citer';
+
+  @override
+  String get composeQuoting => 'CITATION DE';
 }

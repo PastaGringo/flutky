@@ -1,22 +1,33 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
+import '../pubky/homeserver.dart';
 import '../pubky/nexus.dart';
 import '../pubky/ring_session.dart';
+import '../pubky/tags.dart';
 import '../theme.dart';
 import '../pubky/mentions.dart';
 import '../pubky/translation.dart';
 import '../settings/preferences_scope.dart';
+import 'compose_sheet.dart';
 import 'image_viewer.dart';
 import 'post_content.dart';
+import 'post_screen.dart';
 import 'profile_sheet.dart';
 
-/// One post in the timeline.
+/// One post in the timeline, and everything one can do to it.
 ///
 /// A repost is an ordinary post pointing at another. With text of its own it
 /// reads as a quote — the quoted post goes in a framed block underneath; with
 /// no text, it is a plain share and the original takes the whole card, under a
 /// discreet "reposted" line.
+///
+/// A reply points at its parent the same way on the wire, but says so with an
+/// arrow rather than a frame: the answer is what the card is about, and
+/// repeating the post it answers under every reply turned the feed into a hall
+/// of mirrors.
 class PostCard extends StatefulWidget {
   const PostCard({
     super.key,
@@ -29,13 +40,15 @@ class PostCard extends StatefulWidget {
     this.pending = false,
     this.onOpen,
     this.hideQuote = false,
+    this.onChanged,
   });
 
   final PubkyPost post;
   final NexusClient nexus;
   final Map<String, PubkyProfile> profiles;
 
-  /// Lets the profile sheet offer Follow. Absent, it stays read-only.
+  /// Lets the profile sheet offer Follow, and the card write — reply, repost,
+  /// quote, tag. Absent, it stays strictly read-only.
   final RingSession? session;
 
   /// The post this one reposts or replies to, once loaded.
@@ -49,13 +62,17 @@ class PostCard extends StatefulWidget {
   /// to reach the screen you are already on is a dead end.
   final VoidCallback? onOpen;
 
-  /// Hides the quoted block entirely.
+  /// Hides what the post points at — the quoted block of a repost, the arrow
+  /// of a reply.
   ///
-  /// Inside a thread, every reply points at the post displayed above it. The
-  /// block would either repeat that post under each answer, or — when it is
-  /// not passed in — claim the original is unavailable, which is false and
-  /// alarming. The context is already on screen; the frame is noise.
+  /// Inside a thread every reply answers the post displayed above it, so
+  /// naming it under each one would repeat the screen.
   final bool hideQuote;
+
+  /// Something was published from this card. The screen around it decides what
+  /// that is worth: a thread reloads its replies, a timeline usually does
+  /// nothing and lets the card refresh its own counters.
+  final VoidCallback? onChanged;
 
   @override
   State<PostCard> createState() => _PostCardState();
@@ -79,7 +96,6 @@ class PostCard extends StatefulWidget {
     String two(int n) => n.toString().padLeft(2, '0');
     return '${two(d.day)}/${two(d.month)}/${d.year}';
   }
-
 }
 
 class _PostCardState extends State<PostCard> {
@@ -89,7 +105,27 @@ class _PostCardState extends State<PostCard> {
   String? _translated;
   bool _translating = false;
 
-  PubkyPost get post => widget.post;
+  /// The post as the indexer serves it once something has been written here.
+  /// Nexus lags the homeserver by a second or two, so it arrives late — until
+  /// then the card shows what it was given, corrected by [_added] and
+  /// [_removed].
+  PubkyPost? _fresh;
+
+  /// Labels applied and removed from this device, kept until the indexer
+  /// agrees. Without them a tag disappears for the seconds Nexus takes to see
+  /// it, which reads exactly like a write that failed.
+  final _added = <String>{};
+  final _removed = <String>{};
+
+  /// A write is in flight. One at a time: tapping a chip twice while the first
+  /// PUT travels would race the second against it.
+  bool _busy = false;
+
+  PubkyPost get post => _fresh ?? widget.post;
+
+  /// A post the indexer has not seen has no thread and no counters yet, and a
+  /// card without a session is a reader's view.
+  bool get _canAct => widget.session != null && !widget.pending;
 
   Future<void> _translate() async {
     final l = L10n.of(context);
@@ -142,6 +178,230 @@ class _PostCardState extends State<PostCard> {
     }
   }
 
+  /// Reads the post back from the indexer after something was written to it.
+  ///
+  /// Twice, because indexing lands a second or two after the write and the
+  /// first look usually comes back unchanged — the same two-step the thread
+  /// screen uses after a reply, for the same reason.
+  Future<void> _refreshSoon() async {
+    for (final delay in const [Duration(seconds: 3), Duration(seconds: 6)]) {
+      await Future<void>.delayed(delay);
+      if (!mounted) return;
+      final fresh = await widget.nexus.fetchPost(
+        post.author,
+        post.id,
+        viewerId: widget.session?.pubky,
+      );
+      if (fresh == null || !mounted) continue;
+      setState(() {
+        _fresh = fresh;
+        // A local correction is dropped only where the indexer now agrees
+        // with it; anything still in flight keeps its optimistic state.
+        _added.removeWhere((label) =>
+            fresh.tags.any((t) => t.label == label && t.appliedByViewer));
+        _removed.removeWhere((label) =>
+            !fresh.tags.any((t) => t.label == label && t.appliedByViewer));
+      });
+    }
+  }
+
+  Future<void> _reply() async {
+    final session = widget.session;
+    if (session == null) return;
+    final l = L10n.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    final published = await showComposeSheet(
+      context,
+      session: session,
+      nexus: widget.nexus,
+      uiLanguage: Localizations.localeOf(context).languageCode,
+      deepLKey: PreferencesScope.maybeOf(context)?.deepLKey ?? '',
+      parent: post.uri,
+    );
+    if (published == null) return;
+
+    messenger.showSnackBar(SnackBar(content: Text(l.postReplyPublished)));
+    unawaited(widget.nexus.requestIngest(session.pubky));
+    widget.onChanged?.call();
+    unawaited(_refreshSoon());
+  }
+
+  /// Repost or quote — the same write, told apart by whether it carries words.
+  Future<void> _share() async {
+    if (!_canAct) return;
+    final choice = await showModalBottomSheet<_ShareChoice>(
+      context: context,
+      backgroundColor: kSurface,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => const _ShareSheet(),
+    );
+    if (choice == null || !mounted) return;
+    if (choice == _ShareChoice.repost) {
+      await _repost();
+    } else {
+      await _quote();
+    }
+  }
+
+  Future<void> _repost() async {
+    final session = widget.session;
+    if (session == null || _busy) return;
+    final l = L10n.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    setState(() => _busy = true);
+    final client = HomeserverClient(session: session);
+    try {
+      await client.repost(post.uri);
+      messenger.showSnackBar(SnackBar(content: Text(l.postReposted)));
+      unawaited(widget.nexus.requestIngest(session.pubky));
+      widget.onChanged?.call();
+      unawaited(_refreshSoon());
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('$e')));
+    } finally {
+      client.close();
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _quote() async {
+    final session = widget.session;
+    if (session == null) return;
+    final l = L10n.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    final published = await showComposeSheet(
+      context,
+      session: session,
+      nexus: widget.nexus,
+      uiLanguage: Localizations.localeOf(context).languageCode,
+      deepLKey: PreferencesScope.maybeOf(context)?.deepLKey ?? '',
+      quote: post.uri,
+      quotedPost: post,
+      quotedAuthor: widget.profiles[post.author],
+    );
+    if (published == null) return;
+
+    messenger.showSnackBar(SnackBar(content: Text(l.postReposted)));
+    unawaited(widget.nexus.requestIngest(session.pubky));
+    widget.onChanged?.call();
+    unawaited(_refreshSoon());
+  }
+
+  /// Applies a label, or removes it when this account already applied it.
+  Future<void> _toggleTag(String label) async {
+    final session = widget.session;
+    if (session == null || _busy) return;
+    final l = L10n.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final mine = _labels().any((t) => t.label == label && t.appliedByViewer);
+
+    setState(() {
+      _busy = true;
+      // Optimistic, and reversed below if the write fails: a tag that appears
+      // three seconds after the tap reads as a broken button.
+      if (mine) {
+        _added.remove(label);
+        _removed.add(label);
+      } else {
+        _removed.remove(label);
+        _added.add(label);
+      }
+    });
+
+    final client = HomeserverClient(session: session);
+    try {
+      if (mine) {
+        await client.untagPost(uri: post.uri, label: label);
+        messenger.showSnackBar(
+          SnackBar(content: Text(l.postTagRemoved(label))),
+        );
+      } else {
+        await client.tagPost(uri: post.uri, label: label);
+        messenger.showSnackBar(
+          SnackBar(content: Text(l.postTagApplied(label))),
+        );
+      }
+      unawaited(widget.nexus.requestIngest(session.pubky));
+      unawaited(_refreshSoon());
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          if (mine) {
+            _removed.remove(label);
+          } else {
+            _added.remove(label);
+          }
+        });
+      }
+      messenger.showSnackBar(SnackBar(
+        content: Text(e is ArgumentError ? '${e.message}' : '$e'),
+      ));
+    } finally {
+      client.close();
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _addTag() async {
+    if (!_canAct) return;
+    final label = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: kSurface,
+      isScrollControlled: true,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _TagSheet(existing: _labels()),
+    );
+    if (label == null || !mounted) return;
+    await _toggleTag(label);
+  }
+
+  /// The labels to show: what the indexer knows, corrected by what this device
+  /// has just done.
+  List<ProfileTag> _labels() {
+    final out = <ProfileTag>[];
+    for (final tag in post.tags) {
+      final added = _added.contains(tag.label);
+      final removed = _removed.contains(tag.label);
+      // Nobody else carried it, so removing mine removes the label itself.
+      if (removed && tag.appliedByViewer && tag.taggersCount <= 1) continue;
+      out.add(ProfileTag(
+        label: tag.label,
+        taggersCount: tag.taggersCount +
+            (added && !tag.appliedByViewer ? 1 : 0) -
+            (removed && tag.appliedByViewer ? 1 : 0),
+        taggers: tag.taggers,
+        appliedByViewer: (tag.appliedByViewer || added) && !removed,
+      ));
+    }
+    for (final label in _added) {
+      if (out.any((t) => t.label == label)) continue;
+      out.add(ProfileTag(label: label, taggersCount: 1, appliedByViewer: true));
+    }
+    return out;
+  }
+
+  /// Opens the post this one answers or shares.
+  void _openQuoted() {
+    final session = widget.session;
+    final uri = post.repliedUri ?? post.repostedUri;
+    if (session == null || uri == null) return;
+    unawaited(PostScreen.openUri(
+      context,
+      nexus: widget.nexus,
+      session: session,
+      uri: uri,
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = L10n.of(context);
@@ -155,6 +415,7 @@ class _PostCardState extends State<PostCard> {
     final quotedAuthor = widget.quotedAuthor;
     final author = profiles[post.author];
     final name = PostCard.displayName(author, post.author, l);
+    final labels = _labels();
 
     final card = Panel(
       padding: const EdgeInsets.all(16),
@@ -177,6 +438,17 @@ class _PostCardState extends State<PostCard> {
                     ),
                   ),
                 ],
+              ),
+            ),
+          // A reply names what it answers with an arrow rather than a framed
+          // copy of the parent: one line, and a tap to go read it.
+          if (!hideQuote && post.isReply)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _ReplyArrow(
+                parent: quoted,
+                parentAuthor: quotedAuthor,
+                onTap: session == null ? null : _openQuoted,
               ),
             ),
           _Header(
@@ -216,7 +488,7 @@ class _PostCardState extends State<PostCard> {
             const SizedBox(height: 12),
             _Images(urls: post.imageUrls()),
           ],
-          if (!hideQuote && (post.isRepost || post.isReply)) ...[
+          if (!hideQuote && post.isRepost) ...[
             const SizedBox(height: 12),
             _QuotedBlock(
               post: quoted,
@@ -225,12 +497,25 @@ class _PostCardState extends State<PostCard> {
               profiles: profiles,
             ),
           ],
-          _Metrics(
+          if (labels.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _TagRow(
+              tags: labels,
+              profiles: profiles,
+              nexus: nexus,
+              session: session,
+              onToggle: _canAct && !_busy ? _toggleTag : null,
+            ),
+          ],
+          _Actions(
             post: post,
+            tagCount: labels.length,
+            onReply: _canAct ? _reply : null,
+            onShare: _canAct && !_busy ? _share : null,
+            onTag: _canAct && !_busy ? _addTag : null,
             // Nothing to translate in a post with no words, and nothing to
             // translate in one this device has not indexed yet.
-            onTranslate:
-                (post.content.isEmpty || pending) ? null : _translate,
+            onTranslate: (post.content.isEmpty || pending) ? null : _translate,
             translating: _translating,
             translated: _translated != null,
           ),
@@ -248,7 +533,64 @@ class _PostCardState extends State<PostCard> {
       child: card,
     );
   }
+}
 
+/// The one line that says what a reply answers.
+///
+/// It replaced a framed copy of the parent under every reply: in a feed where
+/// half the cards are answers, that block doubled the height of the timeline
+/// to repeat something one tap away — and, whenever the parent had not been
+/// loaded, announced it was unavailable, which was both false and alarming.
+class _ReplyArrow extends StatelessWidget {
+  const _ReplyArrow({
+    required this.parent,
+    required this.parentAuthor,
+    required this.onTap,
+  });
+
+  final PubkyPost? parent;
+  final PubkyProfile? parentAuthor;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = L10n.of(context);
+    final author = parent?.author;
+    final text = author == null
+        ? l.postInReplyToUnknown
+        : l.postInReplyToName(PostCard.displayName(parentAuthor, author, l));
+
+    // Tappable even when the parent has not loaded: the URI is enough to open
+    // it, and the screen it lands on can fetch what this card could not.
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.subdirectory_arrow_right_rounded,
+              size: 15,
+              color: kTextMuted,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: onTap == null ? kTextMuted : kAccent,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _Header extends StatelessWidget {
@@ -349,8 +691,8 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// The quoted or replied-to post, framed so it cannot be mistaken for the
-/// author's own words.
+/// The quoted post, framed so it cannot be mistaken for the author's own
+/// words. Reposts only: a reply points at its parent with an arrow instead.
 class _QuotedBlock extends StatelessWidget {
   const _QuotedBlock({
     required this.post,
@@ -507,15 +849,29 @@ class _Thumb extends StatelessWidget {
       );
 }
 
-class _Metrics extends StatelessWidget {
-  const _Metrics({
+/// Reply, repost and tag, each carrying its own counter.
+///
+/// Those counters used to be the whole row, and they were a dead end: the card
+/// said "1 reply, 5 tags" with no way to add either. Same numbers, now on the
+/// buttons that produce them — and a reply button on the card is what makes it
+/// obvious which post an answer is going to.
+class _Actions extends StatelessWidget {
+  const _Actions({
     required this.post,
+    required this.tagCount,
+    required this.onReply,
+    required this.onShare,
+    required this.onTag,
     required this.onTranslate,
     required this.translating,
     required this.translated,
   });
 
   final PubkyPost post;
+  final int tagCount;
+  final VoidCallback? onReply;
+  final VoidCallback? onShare;
+  final VoidCallback? onTag;
   final VoidCallback? onTranslate;
   final bool translating;
   final bool translated;
@@ -523,47 +879,57 @@ class _Metrics extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = L10n.of(context);
-    final replies = post.counts['replies'] ?? 0;
-    final reposts = post.counts['reposts'] ?? 0;
-    final tags = post.counts['tags'] ?? 0;
-    if (replies + reposts + tags == 0 && onTranslate == null) {
-      return const SizedBox.shrink();
-    }
 
     return Padding(
-      padding: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.only(top: 8),
       child: Row(
         children: [
-          if (replies > 0) _Metric(Icons.mode_comment_outlined, replies),
-          if (reposts > 0) _Metric(Icons.repeat_rounded, reposts),
-          if (tags > 0) _Metric(Icons.sell_outlined, tags),
+          _Action(
+            icon: Icons.mode_comment_outlined,
+            count: post.counts['replies'] ?? 0,
+            tooltip: l.postReply,
+            onTap: onReply,
+          ),
+          _Action(
+            icon: Icons.repeat_rounded,
+            count: post.counts['reposts'] ?? 0,
+            tooltip: l.postActionRepost,
+            onTap: onShare,
+          ),
+          _Action(
+            icon: Icons.sell_outlined,
+            // The labels on screen, not the number of taggings: five people
+            // agreeing on one word are one chip, and a chip is what the button
+            // adds.
+            count: tagCount,
+            tooltip: l.postActionTag,
+            onTap: onTag,
+          ),
           const Spacer(),
           if (onTranslate != null)
-            InkWell(
-              onTap: translating ? null : onTranslate,
-              borderRadius: BorderRadius.circular(999),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: translating
-                    ? const SizedBox(
-                        width: 13,
-                        height: 13,
-                        child: CircularProgressIndicator(strokeWidth: 1.8),
-                      )
-                    : Icon(
-                        translated
-                            ? Icons.undo_rounded
-                            : Icons.translate_rounded,
-                        size: 15,
-                        color: translated ? kAccent : kTextMuted,
-                      ),
+            Tooltip(
+              message: l.postTranslate,
+              child: InkWell(
+                onTap: translating ? null : onTranslate,
+                borderRadius: BorderRadius.circular(999),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  child: translating
+                      ? const SizedBox(
+                          width: 13,
+                          height: 13,
+                          child: CircularProgressIndicator(strokeWidth: 1.8),
+                        )
+                      : Icon(
+                          translated
+                              ? Icons.undo_rounded
+                              : Icons.translate_rounded,
+                          size: 15,
+                          color: translated ? kAccent : kTextMuted,
+                        ),
+                ),
               ),
-            ),
-          if (onTranslate != null)
-            Semantics(
-              label: l.postTranslate,
-              child: const SizedBox.shrink(),
             ),
         ],
       ),
@@ -571,26 +937,355 @@ class _Metrics extends StatelessWidget {
   }
 }
 
-class _Metric extends StatelessWidget {
-  const _Metric(this.icon, this.value);
+class _Action extends StatelessWidget {
+  const _Action({
+    required this.icon,
+    required this.count,
+    required this.tooltip,
+    required this.onTap,
+  });
 
   final IconData icon;
-  final int value;
+  final int count;
+  final String tooltip;
+  final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(right: 18),
+  Widget build(BuildContext context) => Tooltip(
+        message: tooltip,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(999),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(4, 6, 18, 6),
+            child: Row(
+              children: [
+                Icon(icon, size: 16, color: kTextMuted),
+                if (count > 0) ...[
+                  const SizedBox(width: 6),
+                  Text(
+                    '$count',
+                    style: const TextStyle(color: kTextMuted, fontSize: 12.5),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
+}
+
+/// The labels on a post: tap to add or remove your own, long-press to see who
+/// applied one.
+///
+/// The taggers matter — a label is auditable precisely because Nexus publishes
+/// the keys behind it — but they are one line down rather than on the chip:
+/// a timeline showing five names per label is a list of names, not a feed.
+class _TagRow extends StatelessWidget {
+  const _TagRow({
+    required this.tags,
+    required this.profiles,
+    required this.nexus,
+    required this.session,
+    required this.onToggle,
+  });
+
+  final List<ProfileTag> tags;
+  final Map<String, PubkyProfile> profiles;
+  final NexusClient nexus;
+  final RingSession? session;
+  final void Function(String label)? onToggle;
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final tag in tags)
+            _TagChip(
+              tag: tag,
+              onTap: onToggle == null ? null : () => onToggle!(tag.label),
+              onShowTaggers:
+                  tag.taggers.isEmpty ? null : () => _showTaggers(context, tag),
+            ),
+        ],
+      );
+
+  void _showTaggers(BuildContext context, ProfileTag tag) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: kSurface,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        final l = L10n.of(sheetContext);
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l.postTaggersTitle(tag.label),
+                  style: const TextStyle(
+                    color: kTextMuted,
+                    fontSize: 12.5,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                for (final tagger in tag.taggers)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: ClipOval(
+                      child: Image.network(
+                        '$nexusBase/static/avatar/$tagger',
+                        width: 32,
+                        height: 32,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) =>
+                            const Icon(Icons.person_rounded, color: kTextMuted),
+                      ),
+                    ),
+                    title: Text(
+                      PostCard.displayName(profiles[tagger], tagger, l),
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      showProfileSheet(
+                        context,
+                        nexus: nexus,
+                        pubky: tagger,
+                        known: profiles[tagger],
+                        session: session,
+                      );
+                    },
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _TagChip extends StatelessWidget {
+  const _TagChip({
+    required this.tag,
+    required this.onTap,
+    required this.onShowTaggers,
+  });
+
+  final ProfileTag tag;
+  final VoidCallback? onTap;
+  final VoidCallback? onShowTaggers;
+
+  @override
+  Widget build(BuildContext context) {
+    final mine = tag.appliedByViewer;
+
+    return InkWell(
+      onTap: onTap,
+      onLongPress: onShowTaggers,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+        decoration: BoxDecoration(
+          color: mine ? kAccent.withValues(alpha: 0.14) : kBackground,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: mine ? kAccent.withValues(alpha: 0.55) : kBorder,
+          ),
+        ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 15, color: kTextMuted),
-            const SizedBox(width: 5),
             Text(
-              '$value',
-              style: const TextStyle(color: kTextMuted, fontSize: 12.5),
+              tag.label,
+              style: TextStyle(fontSize: 12.5, color: mine ? kAccent : kText),
+            ),
+            if (tag.taggersCount > 1) ...[
+              const SizedBox(width: 6),
+              Text(
+                '${tag.taggersCount}',
+                style: const TextStyle(fontSize: 11.5, color: kTextMuted),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+enum _ShareChoice { repost, quote }
+
+/// Repost as it is, or add words to it. Both write the same resource — a post
+/// carrying an `embed` — which is why they share one button.
+class _ShareSheet extends StatelessWidget {
+  const _ShareSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = L10n.of(context);
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l.postShareTitle,
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontSize: 17),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.repeat_rounded, color: kAccent),
+              title: Text(l.postShareRepost),
+              subtitle: Text(
+                l.postShareRepostNote,
+                style: const TextStyle(color: kTextMuted, fontSize: 12.5),
+              ),
+              onTap: () => Navigator.pop(context, _ShareChoice.repost),
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.format_quote_rounded, color: kAccent),
+              title: Text(l.postShareQuote),
+              subtitle: Text(
+                l.postShareQuoteNote,
+                style: const TextStyle(color: kTextMuted, fontSize: 12.5),
+              ),
+              onTap: () => Navigator.pop(context, _ShareChoice.quote),
             ),
           ],
         ),
-      );
+      ),
+    );
+  }
+}
+
+/// Types a label, refusing here what the network would refuse silently.
+///
+/// A label over twenty characters, or carrying a comma, a colon or a space, is
+/// rejected by the spec — and a rejected write is stored by the homeserver and
+/// ignored by the indexer, which looks exactly like nothing happening.
+class _TagSheet extends StatefulWidget {
+  const _TagSheet({required this.existing});
+
+  /// Already on the post: tapping one is faster than typing it, and it is the
+  /// only hint of what other people are using.
+  final List<ProfileTag> existing;
+
+  @override
+  State<_TagSheet> createState() => _TagSheetState();
+}
+
+class _TagSheetState extends State<_TagSheet> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final label = sanitizeTagLabel(_controller.text);
+    if (label.isEmpty || tagLabelProblem(label) != null) return;
+    Navigator.pop(context, label);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = L10n.of(context);
+    final label = sanitizeTagLabel(_controller.text);
+    // Nothing typed yet is not a mistake, so it carries no error.
+    final problem = label.isEmpty
+        ? null
+        : switch (tagLabelProblem(label)) {
+            'tooLong' => l.postTagTooLong(maxTagLabelLength),
+            'invalidChar' => l.postTagInvalidChar,
+            _ => null,
+          };
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        bottom: 24 + MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l.postTagTitle,
+            style:
+                Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 17),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            textInputAction: TextInputAction.done,
+            onChanged: (_) => setState(() {}),
+            onSubmitted: (_) => _submit(),
+            style: const TextStyle(fontSize: 15.5),
+            decoration: InputDecoration(
+              hintText: l.postTagHint(maxTagLabelLength),
+              hintStyle: const TextStyle(color: kTextMuted),
+              filled: true,
+              fillColor: kBackground,
+              errorText: problem,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: kBorder),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: kBorder),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: kAccent.withValues(alpha: 0.6)),
+              ),
+            ),
+          ),
+          if (widget.existing.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final tag in widget.existing)
+                  _TagChip(
+                    tag: tag,
+                    onTap: () => Navigator.pop(context, tag.label),
+                    onShowTaggers: null,
+                  ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: label.isEmpty || problem != null ? null : _submit,
+            child: Text(l.postTagAdd),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// A `long` post: title plus a Markdown body, both packed as JSON inside the

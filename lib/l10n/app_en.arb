@@ -370,5 +370,72 @@
   "postReply": "Reply",
   "actionClose": "Close",
   "postTranslate": "Translate this post",
-  "postTranslatedBy": "Translated by DeepL — tap the arrow for the original"
+  "postTranslatedBy": "Translated by DeepL — tap the arrow for the original",
+  "postActionRepost": "Repost",
+  "postActionTag": "Tag",
+  "postShareTitle": "Share this post",
+  "postShareRepost": "Repost",
+  "postShareRepostNote": "Share it as it is, with no words of your own.",
+  "postShareQuote": "Quote",
+  "postShareQuoteNote": "Share it with a comment on top.",
+  "postReposted": "Reposted.",
+  "postReplyPublished": "Reply published.",
+  "postTagTitle": "Add a tag",
+  "postTagHint": "one word, {max} characters max",
+  "@postTagHint": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "postTagAdd": "Tag",
+  "postTagApplied": "Tagged « {label} ».",
+  "@postTagApplied": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "postTagRemoved": "Tag « {label} » removed.",
+  "@postTagRemoved": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "postTagEmpty": "A tag cannot be empty.",
+  "postTagTooLong": "A tag is limited to {max} characters.",
+  "@postTagTooLong": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "postTagInvalidChar": "A tag holds no space, comma or colon.",
+  "postTaggersTitle": "« {label} » applied by",
+  "@postTaggersTitle": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "postTagYours": "you",
+  "postInReplyToName": "In reply to {name}",
+  "@postInReplyToName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "postInReplyToUnknown": "In reply to a post",
+  "composeQuoteTitle": "Quote",
+  "composeQuoteHint": "Your comment…",
+  "composeQuotePublish": "Quote",
+  "composeQuoting": "QUOTING"
 }

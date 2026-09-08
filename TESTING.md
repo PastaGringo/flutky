@@ -2,6 +2,56 @@
 
 ## À tester (récents en haut)
 
+### feat: tags, repost, citation, flèche de réponse — v0.16.0 — 2026-09-08
+
+- [ ] **Où** : n'importe quelle carte, rangée d'icônes en bas
+  - **Étape** : les regarder
+  - **Attendu** : bulle (répondre), flèches (reposter), étiquette (tagger),
+    chacune avec son compteur quand il n'est pas nul. Le bouton *Répondre*
+    est sur **la carte** : on voit à quel post on répond avant d'écrire.
+
+- [ ] **Où** : une carte, icône étiquette
+  - **Étape** : taper un mot, valider
+  - **Attendu** : le tag apparaît **immédiatement** en pastille verte sous le
+    post, et sur pubky.app quelques secondes plus tard.
+  - ⚠️ Chemin non éprouvé de mon côté : je ne peux pas écrire depuis ton
+    compte. C'est le test le plus important de cette version.
+
+- [ ] **Où** : la pastille verte que tu viens de poser
+  - **Étape** : la toucher
+  - **Attendu** : le tag est retiré, chez toi comme sur pubky.app. Retoucher
+    la repose — c'est le même fichier, nommé par son contenu.
+
+- [ ] **Où** : la fenêtre d'ajout de tag
+  - **Étape** : écrire « deux mots », ou 21 caractères, ou « a,b »
+  - **Attendu** : un message sous le champ et le bouton grisé. Ces libellés
+    sont refusés par la spec, et un refus côté réseau serait **silencieux**.
+
+- [ ] **Où** : une pastille posée par plusieurs personnes
+  - **Étape** : appui **long**
+  - **Attendu** : la liste de qui l'a posée, chaque nom ouvrant son profil.
+
+- [ ] **Où** : une carte, icône flèches
+  - **Étape** : choisir *Reposter*
+  - **Attendu** : le post repart tel quel dans le flux de tes abonnés, sans
+    texte, avec l'original en encart sous ton nom.
+
+- [ ] **Où** : même icône
+  - **Étape** : choisir *Citer*, écrire un commentaire, publier
+  - **Attendu** : la fenêtre montre ce qui est cité pendant l'écriture, et le
+    post publié porte ton texte au-dessus de l'encart du post cité.
+
+- [ ] **Où** : le flux, une réponse de quelqu'un
+  - **Étape** : regarder au-dessus du nom de l'auteur
+  - **Attendu** : une ligne « ↳ En réponse à *Nom* » en vert, et **plus
+    d'encart** reprenant le post d'origine sous la réponse. La toucher ouvre
+    le post auquel elle répond.
+
+- [ ] **Où** : l'écran d'un post
+  - **Étape** : chercher le gros bouton *Répondre* en bas
+  - **Attendu** : il n'y est plus — chaque carte porte le sien, y compris le
+    post parent affiché en haut.
+
 ### feat: répondre, traduire les posts des autres, image en grand — v0.15.0 — 2026-09-08
 
 - [ ] **Où** : écran d'un post, bouton *Répondre* en bas

@@ -7,10 +7,7 @@ import '../pubky/mentions.dart';
 import '../pubky/nexus.dart';
 import '../pubky/ring_session.dart';
 import '../theme.dart';
-import '../settings/preferences_scope.dart';
-import 'compose_sheet.dart';
 import 'post_card.dart';
-import 'profile_sheet.dart';
 
 /// One post, its labels, and what people replied.
 ///
@@ -146,30 +143,17 @@ class _PostScreenState extends State<PostScreen> {
     }
   }
 
-  /// Replies to the post on screen.
+  /// Reloads after something was published from one of the cards.
   ///
-  /// A reply is an ordinary post carrying the URI it answers — no computed id,
-  /// no separate resource. The list is reloaded afterwards rather than shown
-  /// optimistically: the thread is small, and a wrong guess about ordering
-  /// would be more confusing than a second of waiting.
-  Future<void> _reply(PubkyPost post) async {
-    final published = await showComposeSheet(
-      context,
-      session: widget.session,
-      nexus: widget.nexus,
-      uiLanguage: Localizations.localeOf(context).languageCode,
-      deepLKey: PreferencesScope.maybeOf(context)?.deepLKey ?? '',
-      parent: 'pubky://${post.author}/pub/pubky.app/posts/${post.id}',
-    );
-    if (published == null || !mounted) return;
-
-    unawaited(widget.nexus.requestIngest(widget.session.pubky));
-    // The indexer lags the homeserver by a second or two, so the first look
-    // usually comes back without the reply. Two tries cover it without
-    // turning the screen into a poller.
+  /// The indexer lags the homeserver by a second or two, so the first look
+  /// usually comes back without the new reply. Two tries cover it without
+  /// turning the screen into a poller — and the thread is reloaded rather than
+  /// guessed at, since a wrong guess about ordering would be more confusing
+  /// than a second of waiting.
+  Future<void> _reloadSoon() async {
     await Future<void>.delayed(const Duration(seconds: 3));
-    await _load();
     if (!mounted) return;
+    await _load();
     await Future<void>.delayed(const Duration(seconds: 5));
     if (mounted) await _load();
   }
@@ -178,21 +162,16 @@ class _PostScreenState extends State<PostScreen> {
   Widget build(BuildContext context) {
     final l = L10n.of(context);
     final post = _post;
+    // Only a reply gets its parent as a card of its own, under « in reply
+    // to »: a repost points at what it shares, and the card renders that as a
+    // quoted block with the right wording.
+    final parentAbove = (post?.isReply ?? false) ? _parent : null;
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: kBackground,
         title: Text(l.postTitle),
       ),
-      floatingActionButton: post == null
-          ? null
-          : FloatingActionButton.extended(
-              onPressed: () => _reply(post),
-              backgroundColor: kAccent,
-              foregroundColor: const Color(0xFF04120E),
-              icon: const Icon(Icons.reply_rounded, size: 19),
-              label: Text(l.postReply),
-            ),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _load,
@@ -213,7 +192,7 @@ class _PostScreenState extends State<PostScreen> {
                   ),
                 )
               else ...[
-                if (_parent case final parent?) ...[
+                if (parentAbove case final parent?) ...[
                   Text(
                     l.postInReplyTo,
                     style: const TextStyle(color: kTextMuted, fontSize: 12),
@@ -225,6 +204,7 @@ class _PostScreenState extends State<PostScreen> {
                     profiles: _profiles,
                     session: widget.session,
                     hideQuote: true,
+                    onChanged: () => unawaited(_reloadSoon()),
                     onOpen: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
                         builder: (_) => PostScreen(
@@ -243,17 +223,15 @@ class _PostScreenState extends State<PostScreen> {
                   post: post,
                   nexus: widget.nexus,
                   profiles: _profiles,
+                  // The post it answers is the card right above, so the arrow
+                  // would point at what is already on screen.
+                  hideQuote: parentAbove != null,
+                  quoted: _parent,
+                  quotedAuthor:
+                      _parent == null ? null : _profiles[_parent!.author],
                   session: widget.session,
+                  onChanged: () => unawaited(_reloadSoon()),
                 ),
-                if (post.tags.isNotEmpty) ...[
-                  const SizedBox(height: 14),
-                  _TagList(
-                    tags: post.tags,
-                    profiles: _profiles,
-                    nexus: widget.nexus,
-                    session: widget.session,
-                  ),
-                ],
                 const SizedBox(height: 20),
                 Text(
                   _replies.isEmpty
@@ -274,9 +252,10 @@ class _PostScreenState extends State<PostScreen> {
                       nexus: widget.nexus,
                       profiles: _profiles,
                       session: widget.session,
-                      // Every reply here answers the post above: framing it
+                      // Every reply here answers the post above: naming it
                       // again under each one would repeat the screen.
                       hideQuote: true,
+                      onChanged: () => unawaited(_reloadSoon()),
                       // A thread is a tree, and Nexus hands back one level at
                       // a time: `post_replies` returns direct children only,
                       // and `counts.replies` counts only those. Measured on a
@@ -312,104 +291,6 @@ class _PostScreenState extends State<PostScreen> {
                 ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The labels applied to a post, with who applied them.
-///
-/// The card only ever showed a count. A label is the thing people actually
-/// wrote — five of them say more about how a post landed than the number 5.
-class _TagList extends StatelessWidget {
-  const _TagList({
-    required this.tags,
-    required this.profiles,
-    required this.nexus,
-    required this.session,
-  });
-
-  final List<ProfileTag> tags;
-  final Map<String, PubkyProfile> profiles;
-  final NexusClient nexus;
-  final RingSession session;
-
-  @override
-  Widget build(BuildContext context) => Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          for (final tag in tags)
-            _TagChip(
-              tag: tag,
-              profiles: profiles,
-              nexus: nexus,
-              session: session,
-            ),
-        ],
-      );
-}
-
-class _TagChip extends StatelessWidget {
-  const _TagChip({
-    required this.tag,
-    required this.profiles,
-    required this.nexus,
-    required this.session,
-  });
-
-  final ProfileTag tag;
-  final Map<String, PubkyProfile> profiles;
-  final NexusClient nexus;
-  final RingSession session;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = L10n.of(context);
-    final first = tag.taggers.isEmpty ? null : tag.taggers.first;
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(999),
-      // One tagger opens their profile; several would need a list, which is
-      // more screen than the information deserves.
-      onTap: first == null || tag.taggers.length > 1
-          ? null
-          : () => showProfileSheet(
-                context,
-                nexus: nexus,
-                pubky: first,
-                known: profiles[first],
-                session: session,
-              ),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: kSurface,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: kBorder),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              tag.label,
-              style: const TextStyle(fontSize: 13, color: kText),
-            ),
-            if (tag.taggersCount > 1) ...[
-              const SizedBox(width: 7),
-              Text(
-                '${tag.taggersCount}',
-                style: const TextStyle(fontSize: 11.5, color: kTextMuted),
-              ),
-            ] else if (first != null) ...[
-              const SizedBox(width: 7),
-              Text(
-                PostCard.displayName(profiles[first], first, l),
-                style: const TextStyle(fontSize: 11.5, color: kTextMuted),
-              ),
-            ],
-          ],
         ),
       ),
     );

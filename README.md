@@ -35,6 +35,9 @@ and building for iOS needs macOS.
 | ✅ | Translating a draft before posting, with your own DeepL key — mentions and links left intact |
 | ✅ | **Attaching a picture** to a post — BLAKE3 blob id computed in Dart |
 | ✅ | Opening a post: its labels in full, its replies, and **replying** |
+| ✅ | **Tagging** a post — tap a label to add or remove yours, long-press to see who else applied it |
+| ✅ | **Reposting**, as-is or as a quote with your own words on top |
+| ✅ | Reply, repost and tag on every card, each carrying its own counter |
 | ✅ | Translating **any** post, not only your own draft |
 | ✅ | Tapping a picture to see it full screen, zoomable |
 | ✅ | Built-in diagnostics for the authentication path |
@@ -43,7 +46,7 @@ and building for iOS needs macOS.
 
 | | |
 |---|---|
-| ❌ | Tagging and bookmarking — within reach now that BLAKE3 is in Dart |
+| ❌ | Bookmarking — same content-addressed id as a tag, so it is a short step |
 | ❌ | Deleting or editing your own posts |
 | ❌ | Search |
 | ❌ | Push notifications — the badge polls every two minutes; nothing is delivered in the background |
@@ -127,6 +130,37 @@ only with itself is a hash nobody else can read:
 Note for anyone reading the Rust: `blob.rs` comments say "Z-base32 alphabet"
 while the line beneath calls `Alphabet::Crockford`. The code is what the
 network agrees on, and an upper-case real id settles it.
+
+## A tag is named by what it says
+
+A tag lives at `/pub/pubky.app/tags/<id>` where the id is
+`Crockford(BLAKE3("<uri>:<label>")[..16])` — the same derivation as a blob id,
+applied to a string rather than to bytes. Nothing about it is a name a client
+chooses, and that is what makes it work: tagging the same post twice writes the
+same resource rather than two, and removing a tag is a `DELETE` on a path both
+sides recompute from the pair.
+
+Wrong ids fail the pubky way — the homeserver stores the file, the indexer
+ignores it, nobody says anything. So the derivation is checked against
+pubky-app-specs' own vector (`"cool"` on a canonical post URI →
+`CBYS8P6VJPHC5XXT4WDW26662W`) and, before a line of UI existed, against three
+tags published by other clients: computing the id from the pair Nexus reports
+and fetching it from the tagger's homeserver answered 200 for all three.
+
+The label is trimmed and lower-cased *before* hashing — `Cool` and `cool` are
+one tag to everyone else — and refused here if it is over 20 characters or
+carries a space, a comma or a colon.
+
+## A repost is a post with an embed
+
+No dedicated resource either: a repost is an ordinary post carrying
+`embed: {kind, uri}`. With content of its own it reads as a quote, without it
+as a plain share — the same write, told apart by whether it has words.
+
+Measured on sixteen real reposts rather than guessed: pubky.app writes
+`kind: "short"` inside the embed **whatever the original is**. An article, a
+video and an image all came back as `short`. Copying the real kind would be
+more accurate and less compatible, so this follows the network.
 
 ## A thread is a tree, one level at a time
 

@@ -683,4 +683,92 @@ class L10nEn extends L10n {
   @override
   String get postTranslatedBy =>
       'Translated by DeepL — tap the arrow for the original';
+
+  @override
+  String get postActionRepost => 'Repost';
+
+  @override
+  String get postActionTag => 'Tag';
+
+  @override
+  String get postShareTitle => 'Share this post';
+
+  @override
+  String get postShareRepost => 'Repost';
+
+  @override
+  String get postShareRepostNote =>
+      'Share it as it is, with no words of your own.';
+
+  @override
+  String get postShareQuote => 'Quote';
+
+  @override
+  String get postShareQuoteNote => 'Share it with a comment on top.';
+
+  @override
+  String get postReposted => 'Reposted.';
+
+  @override
+  String get postReplyPublished => 'Reply published.';
+
+  @override
+  String get postTagTitle => 'Add a tag';
+
+  @override
+  String postTagHint(int max) {
+    return 'one word, $max characters max';
+  }
+
+  @override
+  String get postTagAdd => 'Tag';
+
+  @override
+  String postTagApplied(String label) {
+    return 'Tagged « $label ».';
+  }
+
+  @override
+  String postTagRemoved(String label) {
+    return 'Tag « $label » removed.';
+  }
+
+  @override
+  String get postTagEmpty => 'A tag cannot be empty.';
+
+  @override
+  String postTagTooLong(int max) {
+    return 'A tag is limited to $max characters.';
+  }
+
+  @override
+  String get postTagInvalidChar => 'A tag holds no space, comma or colon.';
+
+  @override
+  String postTaggersTitle(String label) {
+    return '« $label » applied by';
+  }
+
+  @override
+  String get postTagYours => 'you';
+
+  @override
+  String postInReplyToName(String name) {
+    return 'In reply to $name';
+  }
+
+  @override
+  String get postInReplyToUnknown => 'In reply to a post';
+
+  @override
+  String get composeQuoteTitle => 'Quote';
+
+  @override
+  String get composeQuoteHint => 'Your comment…';
+
+  @override
+  String get composeQuotePublish => 'Quote';
+
+  @override
+  String get composeQuoting => 'QUOTING';
 }
