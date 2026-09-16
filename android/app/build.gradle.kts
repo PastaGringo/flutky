@@ -78,6 +78,29 @@ android {
 
     buildTypes {
         release {
+            // A release that quietly falls back to the debug key is worse than
+            // one that does not build: it installs, it runs, it looks right —
+            // and Android then refuses every update, because a signature is
+            // the app's identity. Obtainium shows "Signing certificate
+            // mismatch" and the only way out is uninstalling, which costs the
+            // session.
+            //
+            // It happened: v0.16.0 and v0.17.0 went out signed with a debug
+            // key, built from a fresh checkout where `key.properties` — which
+            // git ignores — was simply absent. Nothing warned.
+            //
+            // So a release now FAILS without the key. A developer who only
+            // wants to run the thing passes -Pdebug-signing=true and gets an
+            // APK that is explicitly not publishable.
+            if (!hasReleaseKey && !project.hasProperty("debug-signing")) {
+                throw GradleException(
+                    "Clé de release introuvable : android/key.properties ou le " +
+                    "keystore qu'il désigne est absent. Un APK signé avec la " +
+                    "clé de débogage ne pourra jamais être mis à jour par-dessus " +
+                    "une version publiée. Pour une construction locale non " +
+                    "publiable : -Pdebug-signing=true",
+                )
+            }
             signingConfig = if (hasReleaseKey) {
                 signingConfigs.getByName("release")
             } else {
