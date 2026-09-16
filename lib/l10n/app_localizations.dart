@@ -1566,6 +1566,234 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Expands a link in a post into a card with its title and image. Building it fetches the page from this device, so the site learns your address — turn it off and links stay plain text.'**
   String get settingsLinkPreviewsNote;
+
+  /// No description provided for @actionSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get actionSave;
+
+  /// No description provided for @grantWidenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'One more authorization'**
+  String get grantWidenTitle;
+
+  /// No description provided for @grantWidenNote.
+  ///
+  /// In en, this message translates to:
+  /// **'A grant\'s scope is fixed when it is issued — there is no way to widen one in place, so Ring issues a new one covering both. Approve it under the same pubky you are signed in with.'**
+  String get grantWidenNote;
+
+  /// No description provided for @grantWidenOpenRing.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Pubky Ring'**
+  String get grantWidenOpenRing;
+
+  /// No description provided for @grantWidenWrongKey.
+  ///
+  /// In en, this message translates to:
+  /// **'That was approved under a different pubky. Nothing was changed.'**
+  String get grantWidenWrongKey;
+
+  /// No description provided for @mypubkyGrantReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Your card is a file in another application\'s folder. Reading it needs nothing; writing it needs your grant to cover that folder.'**
+  String get mypubkyGrantReason;
+
+  /// No description provided for @mypubkyIntroTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your mypubky card'**
+  String get mypubkyIntroTitle;
+
+  /// No description provided for @mypubkyIntroBody.
+  ///
+  /// In en, this message translates to:
+  /// **'What mypubky.com shows for your key: links, social accounts and a donation button, over your Pubky name and bio. It is a plain JSON file on your homeserver — no account anywhere.'**
+  String get mypubkyIntroBody;
+
+  /// No description provided for @mypubkyNoCardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No card yet'**
+  String get mypubkyNoCardTitle;
+
+  /// No description provided for @mypubkyNoCardBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing has been written under mypubky yet. Fill this in and save: the card is created on your homeserver, and mypubky.com serves it from there.'**
+  String get mypubkyNoCardBody;
+
+  /// No description provided for @mypubkyLinks.
+  ///
+  /// In en, this message translates to:
+  /// **'Links'**
+  String get mypubkyLinks;
+
+  /// No description provided for @mypubkyNoLinks.
+  ///
+  /// In en, this message translates to:
+  /// **'No links yet.'**
+  String get mypubkyNoLinks;
+
+  /// No description provided for @mypubkySocials.
+  ///
+  /// In en, this message translates to:
+  /// **'Social accounts'**
+  String get mypubkySocials;
+
+  /// No description provided for @mypubkyNoSocials.
+  ///
+  /// In en, this message translates to:
+  /// **'No accounts yet.'**
+  String get mypubkyNoSocials;
+
+  /// No description provided for @mypubkyAppearance.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance'**
+  String get mypubkyAppearance;
+
+  /// No description provided for @mypubkyBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Background'**
+  String get mypubkyBackground;
+
+  /// No description provided for @mypubkyCardPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'Card position'**
+  String get mypubkyCardPosition;
+
+  /// No description provided for @mypubkyCardMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Card background'**
+  String get mypubkyCardMode;
+
+  /// No description provided for @mypubkyShown.
+  ///
+  /// In en, this message translates to:
+  /// **'What the card shows'**
+  String get mypubkyShown;
+
+  /// No description provided for @mypubkyShowPosts.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest posts'**
+  String get mypubkyShowPosts;
+
+  /// No description provided for @mypubkyShowTags.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile tags'**
+  String get mypubkyShowTags;
+
+  /// No description provided for @mypubkyDonate.
+  ///
+  /// In en, this message translates to:
+  /// **'Donation button'**
+  String get mypubkyDonate;
+
+  /// No description provided for @mypubkyDonateNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Shows a Paykit QR code, and a Bitcoin one when an address is given.'**
+  String get mypubkyDonateNote;
+
+  /// No description provided for @mypubkyBitcoinAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Bitcoin address'**
+  String get mypubkyBitcoinAddress;
+
+  /// No description provided for @mypubkyLinkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Link'**
+  String get mypubkyLinkTitle;
+
+  /// No description provided for @mypubkyLinkLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Label'**
+  String get mypubkyLinkLabel;
+
+  /// No description provided for @mypubkyLinkTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Address'**
+  String get mypubkyLinkTarget;
+
+  /// No description provided for @mypubkySocialTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Social account'**
+  String get mypubkySocialTitle;
+
+  /// No description provided for @mypubkySocialUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile address'**
+  String get mypubkySocialUrl;
+
+  /// No description provided for @mypubkySave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get mypubkySave;
+
+  /// No description provided for @mypubkyCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Create the card'**
+  String get mypubkyCreate;
+
+  /// No description provided for @mypubkySaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Card saved.'**
+  String get mypubkySaved;
+
+  /// No description provided for @mypubkyRefused.
+  ///
+  /// In en, this message translates to:
+  /// **'The homeserver refused the write. The grant does not cover the mypubky folder — authorize it again.'**
+  String get mypubkyRefused;
+
+  /// No description provided for @mypubkyOpenPublic.
+  ///
+  /// In en, this message translates to:
+  /// **'See the public card'**
+  String get mypubkyOpenPublic;
+
+  /// No description provided for @mypubkyGrantHeld.
+  ///
+  /// In en, this message translates to:
+  /// **'Your grant covers the mypubky folder: saving writes straight to your homeserver.'**
+  String get mypubkyGrantHeld;
+
+  /// No description provided for @mypubkyGrantNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Your grant does not cover the mypubky folder yet. Saving will ask Ring for it — once.'**
+  String get mypubkyGrantNeeded;
+
+  /// No description provided for @appsMypubkySummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Your profile card'**
+  String get appsMypubkySummary;
+
+  /// No description provided for @mypubkyCustomBackgroundNote.
+  ///
+  /// In en, this message translates to:
+  /// **'A custom background stays as it is: it is a file Flutky cannot replace yet. Change it on mypubky.com.'**
+  String get mypubkyCustomBackgroundNote;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

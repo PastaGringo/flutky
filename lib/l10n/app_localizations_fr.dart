@@ -857,4 +857,128 @@ class L10nFr extends L10n {
   @override
   String get settingsLinkPreviewsNote =>
       'Déplie un lien d\'un post en carte, avec son titre et son image. La construire va chercher la page depuis cet appareil : le site apprend donc ton adresse. Désactivé, un lien reste du texte.';
+
+  @override
+  String get actionSave => 'Enregistrer';
+
+  @override
+  String get grantWidenTitle => 'Une autorisation de plus';
+
+  @override
+  String get grantWidenNote =>
+      'La portée d\'un grant est figée au moment où il est émis — on ne peut pas l\'élargir sur place, Ring en émet donc un nouveau qui couvre les deux. À approuver avec la même pubky que celle connectée.';
+
+  @override
+  String get grantWidenOpenRing => 'Ouvrir Pubky Ring';
+
+  @override
+  String get grantWidenWrongKey =>
+      'Approuvé avec une autre pubky. Rien n\'a été changé.';
+
+  @override
+  String get mypubkyGrantReason =>
+      'Ta carte est un fichier dans le dossier d\'une autre application. La lire ne demande rien ; l\'écrire demande que ton grant couvre ce dossier.';
+
+  @override
+  String get mypubkyIntroTitle => 'Ta carte mypubky';
+
+  @override
+  String get mypubkyIntroBody =>
+      'Ce que mypubky.com affiche pour ta clé : des liens, des comptes sociaux et un bouton de don, par-dessus ton nom et ta bio Pubky. C\'est un simple fichier JSON sur ton homeserver — aucun compte nulle part.';
+
+  @override
+  String get mypubkyNoCardTitle => 'Pas encore de carte';
+
+  @override
+  String get mypubkyNoCardBody =>
+      'Rien n\'a encore été écrit sous mypubky. Remplis ceci et enregistre : la carte est créée sur ton homeserver, et mypubky.com la sert depuis là.';
+
+  @override
+  String get mypubkyLinks => 'Liens';
+
+  @override
+  String get mypubkyNoLinks => 'Aucun lien pour l\'instant.';
+
+  @override
+  String get mypubkySocials => 'Comptes sociaux';
+
+  @override
+  String get mypubkyNoSocials => 'Aucun compte pour l\'instant.';
+
+  @override
+  String get mypubkyAppearance => 'Apparence';
+
+  @override
+  String get mypubkyBackground => 'Fond';
+
+  @override
+  String get mypubkyCardPosition => 'Position de la carte';
+
+  @override
+  String get mypubkyCardMode => 'Fond de la carte';
+
+  @override
+  String get mypubkyShown => 'Ce que la carte montre';
+
+  @override
+  String get mypubkyShowPosts => 'Derniers posts';
+
+  @override
+  String get mypubkyShowTags => 'Tags du profil';
+
+  @override
+  String get mypubkyDonate => 'Bouton de don';
+
+  @override
+  String get mypubkyDonateNote =>
+      'Affiche un QR Paykit, et un QR Bitcoin si une adresse est renseignée.';
+
+  @override
+  String get mypubkyBitcoinAddress => 'Adresse Bitcoin';
+
+  @override
+  String get mypubkyLinkTitle => 'Lien';
+
+  @override
+  String get mypubkyLinkLabel => 'Libellé';
+
+  @override
+  String get mypubkyLinkTarget => 'Adresse';
+
+  @override
+  String get mypubkySocialTitle => 'Compte social';
+
+  @override
+  String get mypubkySocialUrl => 'Adresse du profil';
+
+  @override
+  String get mypubkySave => 'Enregistrer';
+
+  @override
+  String get mypubkyCreate => 'Créer la carte';
+
+  @override
+  String get mypubkySaved => 'Carte enregistrée.';
+
+  @override
+  String get mypubkyRefused =>
+      'Le homeserver a refusé l\'écriture. Le grant ne couvre pas le dossier mypubky — il faut l\'autoriser à nouveau.';
+
+  @override
+  String get mypubkyOpenPublic => 'Voir la carte publique';
+
+  @override
+  String get mypubkyGrantHeld =>
+      'Ton grant couvre le dossier mypubky : enregistrer écrit directement sur ton homeserver.';
+
+  @override
+  String get mypubkyGrantNeeded =>
+      'Ton grant ne couvre pas encore le dossier mypubky. Enregistrer le demandera à Ring — une fois.';
+
+  @override
+  String get appsMypubkySummary => 'Ta carte de profil';
+
+  @override
+  String get mypubkyCustomBackgroundNote =>
+      'Un fond personnalisé est laissé tel quel : c\'est un fichier que Flutky ne sait pas encore remplacer. À changer sur mypubky.com.';
 }
