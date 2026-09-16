@@ -42,6 +42,7 @@ and building for iOS needs macOS.
 | ✅ | Replies drawn as a thread: the post being answered sits above, whole, joined by a rail down the left and foldable |
 | ✅ | Translating **any** post, not only your own draft |
 | ✅ | Tapping a picture to see it full screen, zoomable |
+| ✅ | An **Apps** tab reading other Pubky applications — eventky's calendar, with no permission at all |
 | ✅ | Built-in diagnostics for the authentication path |
 
 ### Not there yet

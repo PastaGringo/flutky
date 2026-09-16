@@ -1440,6 +1440,72 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Better — a key of its own, revocable on its own. Needs a Pubky Ring that knows grant sign-in: the published v1.19 answers “Unrecognized format”. A rebuild that does know it is in this project\'s releases.'**
   String get connectGrantNeedsNewerRing;
+
+  /// No description provided for @tabApps.
+  ///
+  /// In en, this message translates to:
+  /// **'Apps'**
+  String get tabApps;
+
+  /// No description provided for @titleApps.
+  ///
+  /// In en, this message translates to:
+  /// **'Pubky apps'**
+  String get titleApps;
+
+  /// No description provided for @appsIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Other Pubky applications, read from inside Flutky. Not links out: their data lives under your own key, so it can be shown here.'**
+  String get appsIntro;
+
+  /// No description provided for @appsEventkySummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Events and calendars'**
+  String get appsEventkySummary;
+
+  /// No description provided for @appsReadOnlyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading costs nothing'**
+  String get appsReadOnlyTitle;
+
+  /// No description provided for @appsReadOnlyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything under /pub/ is world-readable, so displaying another app\'s data needs no permission at all. Writing would need your grant widened to that app\'s folder — asked for when it is needed, not at sign-in.'**
+  String get appsReadOnlyBody;
+
+  /// No description provided for @eventkyEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet. Events you create or say you will attend on eventky.app show up in this list.'**
+  String get eventkyEmpty;
+
+  /// No description provided for @eventkyNoDate.
+  ///
+  /// In en, this message translates to:
+  /// **'No date set'**
+  String get eventkyNoDate;
+
+  /// No description provided for @eventkyGoing.
+  ///
+  /// In en, this message translates to:
+  /// **'Going'**
+  String get eventkyGoing;
+
+  /// No description provided for @eventkyNotGoing.
+  ///
+  /// In en, this message translates to:
+  /// **'Not going'**
+  String get eventkyNotGoing;
+
+  /// No description provided for @eventkyMaybe.
+  ///
+  /// In en, this message translates to:
+  /// **'Maybe'**
+  String get eventkyMaybe;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

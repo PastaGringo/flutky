@@ -787,4 +787,40 @@ class L10nEn extends L10n {
   @override
   String get connectGrantNeedsNewerRing =>
       'Better — a key of its own, revocable on its own. Needs a Pubky Ring that knows grant sign-in: the published v1.19 answers “Unrecognized format”. A rebuild that does know it is in this project\'s releases.';
+
+  @override
+  String get tabApps => 'Apps';
+
+  @override
+  String get titleApps => 'Pubky apps';
+
+  @override
+  String get appsIntro =>
+      'Other Pubky applications, read from inside Flutky. Not links out: their data lives under your own key, so it can be shown here.';
+
+  @override
+  String get appsEventkySummary => 'Events and calendars';
+
+  @override
+  String get appsReadOnlyTitle => 'Reading costs nothing';
+
+  @override
+  String get appsReadOnlyBody =>
+      'Everything under /pub/ is world-readable, so displaying another app\'s data needs no permission at all. Writing would need your grant widened to that app\'s folder — asked for when it is needed, not at sign-in.';
+
+  @override
+  String get eventkyEmpty =>
+      'Nothing here yet. Events you create or say you will attend on eventky.app show up in this list.';
+
+  @override
+  String get eventkyNoDate => 'No date set';
+
+  @override
+  String get eventkyGoing => 'Going';
+
+  @override
+  String get eventkyNotGoing => 'Not going';
+
+  @override
+  String get eventkyMaybe => 'Maybe';
 }

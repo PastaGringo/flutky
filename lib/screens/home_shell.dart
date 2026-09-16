@@ -11,6 +11,7 @@ import '../settings/feed_preferences.dart';
 import '../settings/locale_controller.dart';
 import '../theme.dart';
 import 'diagnostics_screen.dart';
+import 'apps_screen.dart';
 import 'discover_screen.dart';
 import 'feed_screen.dart';
 import 'messages_screen.dart';
@@ -153,6 +154,32 @@ class _HomeShellState extends State<HomeShell> {
     unawaited(_countUnread());
   }
 
+  /// The profile becomes a place you visit, like the notifications did.
+  ///
+  /// It was a tab, and a tab is for something you switch between constantly.
+  /// Your own profile is not that — the bottom row is better spent on the
+  /// other Pubky applications, which is where the interesting reading is.
+  void _openProfile() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => Scaffold(
+          appBar: AppBar(
+            backgroundColor: kBackground,
+            title: Text(L10n.of(context).titleProfile),
+          ),
+          body: SafeArea(
+            child: ProfileScreen(
+              session: widget.session,
+              profile: widget.profile,
+              error: widget.profileError,
+              onRefresh: widget.onRefreshProfile,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _openIssue(String template) => launchUrl(
         Uri.parse('$repositoryUrl/issues/new?template=$template'),
         mode: LaunchMode.externalApplication,
@@ -165,7 +192,7 @@ class _HomeShellState extends State<HomeShell> {
       l.titleFeed,
       l.titleDiscover,
       l.titleMessages,
-      l.titleProfile,
+      l.titleApps,
     ];
 
     return Scaffold(
@@ -173,6 +200,20 @@ class _HomeShellState extends State<HomeShell> {
         backgroundColor: kBackground,
         title: Text(titles[_tab]),
         actions: [
+          IconButton(
+            onPressed: _openProfile,
+            icon: ClipOval(
+              child: Image.network(
+                widget.profile.avatarUrl,
+                width: 26,
+                height: 26,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) =>
+                    const Icon(Icons.person_rounded, size: 22),
+              ),
+            ),
+            tooltip: l.titleProfile,
+          ),
           IconButton(
             onPressed: _openNotifications,
             icon: Badge.count(
@@ -250,12 +291,7 @@ class _HomeShellState extends State<HomeShell> {
               session: widget.session,
             ),
             const MessagesScreen(),
-            ProfileScreen(
-              session: widget.session,
-              profile: widget.profile,
-              error: widget.profileError,
-              onRefresh: widget.onRefreshProfile,
-            ),
+            AppsScreen(session: widget.session),
           ],
         ),
       ),
@@ -283,9 +319,9 @@ class _HomeShellState extends State<HomeShell> {
             label: '${l.tabMessages} (WIP)',
           ),
           NavigationDestination(
-            icon: const Icon(Icons.person_outline_rounded),
-            selectedIcon: const Icon(Icons.person_rounded, color: kAccent),
-            label: l.tabProfile,
+            icon: const Icon(Icons.apps_outlined),
+            selectedIcon: const Icon(Icons.apps_rounded, color: kAccent),
+            label: l.tabApps,
           ),
         ],
       ),

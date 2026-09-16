@@ -435,5 +435,16 @@
   "connectButtonCookie": "Sign in the old way (cookie session)",
   "connectAwaitingApproval": "Waiting for your approval in Pubky Ring. Approve there, and this screen carries on by itself — Ring does not need to reopen Flutky.",
   "errorGrantUnsupported": "No approval arrived. If Pubky Ring showed “Unrecognized format”, its version does not know grant sign-in yet — use the cookie option below, which still works.",
-  "connectGrantNeedsNewerRing": "Better — a key of its own, revocable on its own. Needs a Pubky Ring that knows grant sign-in: the published v1.19 answers “Unrecognized format”. A rebuild that does know it is in this project's releases."
+  "connectGrantNeedsNewerRing": "Better — a key of its own, revocable on its own. Needs a Pubky Ring that knows grant sign-in: the published v1.19 answers “Unrecognized format”. A rebuild that does know it is in this project's releases.",
+  "tabApps": "Apps",
+  "titleApps": "Pubky apps",
+  "appsIntro": "Other Pubky applications, read from inside Flutky. Not links out: their data lives under your own key, so it can be shown here.",
+  "appsEventkySummary": "Events and calendars",
+  "appsReadOnlyTitle": "Reading costs nothing",
+  "appsReadOnlyBody": "Everything under /pub/ is world-readable, so displaying another app's data needs no permission at all. Writing would need your grant widened to that app's folder — asked for when it is needed, not at sign-in.",
+  "eventkyEmpty": "Nothing here yet. Events you create or say you will attend on eventky.app show up in this list.",
+  "eventkyNoDate": "No date set",
+  "eventkyGoing": "Going",
+  "eventkyNotGoing": "Not going",
+  "eventkyMaybe": "Maybe"
 }

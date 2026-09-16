@@ -789,4 +789,40 @@ class L10nFr extends L10n {
   @override
   String get connectGrantNeedsNewerRing =>
       'Mieux — une clé propre à l\'app, révocable seule. Demande un Pubky Ring qui connaît le grant : la v1.19 publiée répond « Unrecognized format ». Une reconstruction qui le connaît est dans les releases du projet.';
+
+  @override
+  String get tabApps => 'Apps';
+
+  @override
+  String get titleApps => 'Applications Pubky';
+
+  @override
+  String get appsIntro =>
+      'D\'autres applications Pubky, lues depuis Flutky. Pas des liens vers l\'extérieur : leurs données vivent sous ta propre clé, elles peuvent donc s\'afficher ici.';
+
+  @override
+  String get appsEventkySummary => 'Événements et calendriers';
+
+  @override
+  String get appsReadOnlyTitle => 'Lire ne coûte rien';
+
+  @override
+  String get appsReadOnlyBody =>
+      'Tout ce qui est sous /pub/ est lisible par n\'importe qui : afficher les données d\'une autre app ne demande aucune autorisation. Écrire exigerait d\'élargir ton grant à son dossier — demandé au moment où c\'est nécessaire, pas à la connexion.';
+
+  @override
+  String get eventkyEmpty =>
+      'Rien ici pour l\'instant. Les événements que tu crées ou auxquels tu t\'inscris sur eventky.app apparaîtront dans cette liste.';
+
+  @override
+  String get eventkyNoDate => 'Sans date';
+
+  @override
+  String get eventkyGoing => 'Inscrit';
+
+  @override
+  String get eventkyNotGoing => 'Décliné';
+
+  @override
+  String get eventkyMaybe => 'Peut-être';
 }
