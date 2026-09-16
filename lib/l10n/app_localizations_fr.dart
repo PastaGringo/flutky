@@ -850,4 +850,11 @@ class L10nFr extends L10n {
 
   @override
   String get postEdited => 'Post modifié.';
+
+  @override
+  String get settingsLinkPreviews => 'Aperçu des liens';
+
+  @override
+  String get settingsLinkPreviewsNote =>
+      'Déplie un lien d\'un post en carte, avec son titre et son image. La construire va chercher la page depuis cet appareil : le site apprend donc ton adresse. Désactivé, un lien reste du texte.';
 }

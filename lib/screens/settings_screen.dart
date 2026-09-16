@@ -91,6 +91,24 @@ class SettingsScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+                  ListenableBuilder(
+                    listenable: preferences,
+                    builder: (context, _) => SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: preferences.linkPreviews,
+                      onChanged: preferences.setLinkPreviews,
+                      activeThumbColor: kAccent,
+                      title: Text(
+                        l.settingsLinkPreviews,
+                        style: const TextStyle(fontSize: 15),
+                      ),
+                      subtitle: Text(
+                        l.settingsLinkPreviewsNote,
+                        style: const TextStyle(
+                            color: kTextMuted, fontSize: 12.5, height: 1.4),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

@@ -848,4 +848,11 @@ class L10nEn extends L10n {
 
   @override
   String get postEdited => 'Post edited.';
+
+  @override
+  String get settingsLinkPreviews => 'Link previews';
+
+  @override
+  String get settingsLinkPreviewsNote =>
+      'Expands a link in a post into a card with its title and image. Building it fetches the page from this device, so the site learns your address — turn it off and links stay plain text.';
 }

@@ -395,5 +395,7 @@
   "postDeleteTitle": "Supprimer ce post ?",
   "postDeleteBody": "Il quitte ton homeserver et l'indexeur l'oublie. Ce que d'autres clients ont déjà récupéré reste récupéré — une suppression ici n'est pas une suppression partout.",
   "postDeleted": "Post supprimé.",
-  "postEdited": "Post modifié."
+  "postEdited": "Post modifié.",
+  "settingsLinkPreviews": "Aperçu des liens",
+  "settingsLinkPreviewsNote": "Déplie un lien d'un post en carte, avec son titre et son image. La construire va chercher la page depuis cet appareil : le site apprend donc ton adresse. Désactivé, un lien reste du texte."
 }

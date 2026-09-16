@@ -1554,6 +1554,18 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Post edited.'**
   String get postEdited;
+
+  /// No description provided for @settingsLinkPreviews.
+  ///
+  /// In en, this message translates to:
+  /// **'Link previews'**
+  String get settingsLinkPreviews;
+
+  /// No description provided for @settingsLinkPreviewsNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Expands a link in a post into a card with its title and image. Building it fetches the page from this device, so the site learns your address — turn it off and links stay plain text.'**
+  String get settingsLinkPreviewsNote;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

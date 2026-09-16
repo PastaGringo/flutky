@@ -13,6 +13,7 @@ import '../pubky/translation.dart';
 import '../settings/preferences_scope.dart';
 import 'compose_sheet.dart';
 import 'image_viewer.dart';
+import 'link_preview_card.dart';
 import 'post_content.dart';
 import 'post_screen.dart';
 import 'profile_sheet.dart';
@@ -547,6 +548,16 @@ class _PostCardState extends State<PostCard> {
     final author = profiles[post.author];
     final name = PostCard.displayName(author, post.author, l);
     final labels = _labels();
+    // The first link only. A post listing five sources would otherwise turn
+    // into five cards, and the fifth is never the one it is about.
+    //
+    // Skipped on a post that already carries its own picture: the attachment
+    // is what the author chose to show, and a second large image under it
+    // competes with it for no gain.
+    final linkUrl = PreferencesScope.maybeOf(context)?.linkPreviews == false ||
+            post.imageUrls().isNotEmpty
+        ? null
+        : RegExp(linkPattern).firstMatch(post.content)?.group(0);
 
     final card = Panel(
       padding: const EdgeInsets.all(16),
@@ -622,6 +633,7 @@ class _PostCardState extends State<PostCard> {
             const SizedBox(height: 12),
             _Images(urls: post.imageUrls()),
           ],
+          if (linkUrl != null) LinkPreviewCard(url: linkUrl),
           if (!hideQuote && post.isRepost) ...[
             const SizedBox(height: 12),
             _QuotedBlock(

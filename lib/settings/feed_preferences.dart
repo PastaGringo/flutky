@@ -6,6 +6,7 @@ class FeedPreferences extends ChangeNotifier {
   static const _includeOwnKey = 'feed_include_own_v1';
   static const _deepLKeyKey = 'translation_deepl_key_v1';
   static const _seenNotificationsKey = 'notifications_seen_ms_v1';
+  static const _linkPreviewsKey = 'feed_link_previews_v1';
 
   /// Nexus's `following` stream covers the accounts you follow — not you.
   /// Off by default, because that is what the source actually means; turning
@@ -18,6 +19,16 @@ class FeedPreferences extends ChangeNotifier {
   /// it.
   String _deepLKey = '';
   String get deepLKey => _deepLKey;
+
+  /// Whether a link in a post is expanded into a card.
+  ///
+  /// On by default, because a bare URL says nothing about where it goes. But
+  /// building the card means fetching the linked page from this device, so
+  /// the site learns the reader's address and that it was read at all — which
+  /// is exactly the sort of thing this network exists to avoid. Hence a
+  /// switch, rather than a decision made for everyone.
+  bool _linkPreviews = true;
+  bool get linkPreviews => _linkPreviews;
 
   /// When the notification list was last opened, in milliseconds.
   ///
@@ -34,6 +45,7 @@ class FeedPreferences extends ChangeNotifier {
       _includeOwnPosts = prefs.getBool(_includeOwnKey) ?? false;
       _deepLKey = prefs.getString(_deepLKeyKey) ?? '';
       _seenNotificationsMs = prefs.getInt(_seenNotificationsKey) ?? 0;
+      _linkPreviews = prefs.getBool(_linkPreviewsKey) ?? true;
       notifyListeners();
     } catch (_) {
       // Unreadable preferences fall back to the defaults above.
@@ -46,6 +58,17 @@ class FeedPreferences extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_includeOwnKey, value);
+    } catch (_) {
+      // The choice still applies for this run.
+    }
+  }
+
+  Future<void> setLinkPreviews(bool value) async {
+    _linkPreviews = value;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_linkPreviewsKey, value);
     } catch (_) {
       // The choice still applies for this run.
     }

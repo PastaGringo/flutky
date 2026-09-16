@@ -454,5 +454,7 @@
   "postDeleteTitle": "Delete this post?",
   "postDeleteBody": "It goes from your homeserver, and the indexer drops it. What other clients already fetched stays fetched — a deletion here is not a deletion everywhere.",
   "postDeleted": "Post deleted.",
-  "postEdited": "Post edited."
+  "postEdited": "Post edited.",
+  "settingsLinkPreviews": "Link previews",
+  "settingsLinkPreviewsNote": "Expands a link in a post into a card with its title and image. Building it fetches the page from this device, so the site learns your address — turn it off and links stay plain text."
 }
