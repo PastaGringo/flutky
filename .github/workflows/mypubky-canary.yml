@@ -12,6 +12,13 @@ on:
   schedule:
     - cron: "17 6 * * 1"
   workflow_dispatch:
+    inputs:
+      eprouver_alerte:
+        description: >-
+          Force un echec pour verifier que l'issue s'ouvre vraiment. Une
+          sentinelle verte ne prouve pas que son alerte part.
+        type: boolean
+        default: false
   push:
     paths:
       - "tool/mypubky_canary.py"
@@ -40,7 +47,13 @@ jobs:
         id: canary
         run: |
           set +e
-          python tool/mypubky_canary.py | tee rapport.txt
+          if [ "${{ inputs.eprouver_alerte }}" = "true" ]; then
+            # Attente volontairement fausse : le chemin du fichier n'existe
+            # pas, la sonde DOIT le dire et l'alerte DOIT partir.
+            python tool/mypubky_canary.py --chemin /pub/mypubky.invalid/card.json | tee rapport.txt
+          else
+            python tool/mypubky_canary.py | tee rapport.txt
+          fi
           echo "code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
 
       - name: ouvrir une issue

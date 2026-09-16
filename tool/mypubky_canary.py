@@ -323,7 +323,17 @@ def selftest():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--selftest", action="store_true")
+    parser.add_argument(
+        "--chemin",
+        help="Remplace le chemin de la carte. Sert a eprouver que l'alerte "
+             "part vraiment : une sentinelle verte ne prouve rien sur ce qui "
+             "se passe quand elle rougit.",
+    )
     args = parser.parse_args()
+
+    if args.chemin:
+        global CARD_PATH
+        CARD_PATH = args.chemin
 
     if args.selftest:
         return selftest()
