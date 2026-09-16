@@ -2,6 +2,71 @@
 
 ## À tester (récents en haut)
 
+### feat: mypubky dans Apps, grant élargi — v0.22.0 — 2026-09-16
+
+- [ ] **Où** : onglet Apps → mypubky
+  - **Étape** : ouvrir l'écran
+  - **Attendu** : si tu n'as jamais utilisé mypubky, « Pas encore de carte » et
+    un formulaire vide. Sinon, tes liens et comptes déjà en place.
+
+- [ ] **Où** : mypubky, section Liens, bouton +
+  - **Étape** : ajouter un libellé et une adresse, enregistrer
+  - **Attendu** : Ring s'ouvre pour **une** autorisation de plus, listant
+    `/pub/pubky.app/:rw` (déjà là) et `/pub/mypubky.com/:rw` (nouveau).
+    Après approbation : « Carte enregistrée ».
+  - ⚠️ Chemin non éprouvé de mon côté : je ne peux pas écrire depuis ton compte.
+    C'est le test le plus important de cette version.
+
+- [ ] **Où** : mypubky, icône en haut à droite
+  - **Étape** : l'ouvrir
+  - **Attendu** : `mypubky.com/<ta clé>` dans le navigateur, avec le lien que
+    tu viens d'ajouter.
+
+- [ ] **Où** : mypubky, Apparence → Fond
+  - **Étape** : choisir back1, back2 ou back3, enregistrer, recharger la page
+    publique
+  - **Attendu** : le fond change réellement. Flutky écrit l'identifiant sans
+    URL et laisse mypubky.com la résoudre — si le fond devient blanc ou cassé,
+    c'est cette hypothèse qui est fausse, à signaler.
+
+- [ ] **Où** : mypubky, après un enregistrement réussi
+  - **Étape** : fermer et relancer Flutky, revenir sur mypubky
+  - **Attendu** : le bandeau du bas dit que le grant **couvre** le dossier ;
+    Ring n'est pas redemandé.
+
+### feat: modifier/supprimer un post, aperçu des liens — v0.21.0 — 2026-09-16
+
+- [ ] **Où** : un de tes posts, menu `⋯` à droite de la rangée d'actions
+  - **Étape** : le regarder sur un de tes posts, puis sur celui de quelqu'un
+    d'autre
+  - **Attendu** : présent chez toi, **absent** chez les autres.
+
+- [ ] **Où** : ton post, `⋯` → Modifier
+  - **Étape** : changer le texte, enregistrer
+  - **Attendu** : le texte change **sur place**, le post ne remonte pas en tête
+    du fil. Si le post mentionnait quelqu'un, l'éditeur montre `@Nom`.
+
+- [ ] **Où** : un de tes posts **avec une image**, `⋯` → Modifier
+  - **Étape** : corriger seulement le texte, enregistrer
+  - **Attendu** : l'image est **toujours là**. C'est le cas qui régressait.
+
+- [ ] **Où** : une de tes **réponses**, `⋯` → Modifier
+  - **Étape** : changer le texte, enregistrer
+  - **Attendu** : elle reste une réponse, toujours rattachée au post d'origine.
+
+- [ ] **Où** : ton post, `⋯` → Supprimer
+  - **Étape** : confirmer
+  - **Attendu** : le post disparaît de la liste sans laisser de trou. Depuis le
+    fil de discussion d'un post, l'écran se referme.
+
+- [ ] **Où** : composer un post contenant un lien YouTube, publier
+  - **Étape** : le regarder dans le fil
+  - **Attendu** : vignette, « YouTube », titre complet et nom de la chaîne.
+
+- [ ] **Où** : Paramètres → Flux → Aperçu des liens
+  - **Étape** : couper, revenir au fil
+  - **Attendu** : plus aucune carte, les liens redeviennent du texte.
+
 ### feat: tags, repost, citation, fil de discussion — v0.17.0 — 2026-09-08
 
 - [ ] **Où** : n'importe quelle carte, rangée d'icônes en bas
