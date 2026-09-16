@@ -1,0 +1,68 @@
+# Flutky écrit dans le dossier d'une autre application, sur un format qui
+# n'est spécifié nulle part. Si mypubky.com change, rien dans Flutky ne le
+# signalerait : il continuerait à écrire l'ancienne forme, et la carte
+# publique s'afficherait de travers sans que personne ne le sache.
+#
+# Cette sentinelle rejoue les constats chaque lundi et ouvre une issue quand
+# l'un d'eux tombe. Elle vérifie d'abord qu'elle sait échouer — un contrôle
+# aveugle et un contrôle satisfait rendent exactement le même « tout va bien ».
+name: sentinelle mypubky
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+  push:
+    paths:
+      - "tool/mypubky_canary.py"
+      - ".github/workflows/mypubky-canary.yml"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # D'abord la sonde de la sonde : sans elle, un script qui n'observerait
+      # plus rien passerait au vert tous les lundis.
+      - name: la sentinelle sait-elle échouer ?
+        run: python tool/mypubky_canary.py --selftest
+
+      - name: mypubky a-t-il changé ?
+        id: canary
+        run: |
+          set +e
+          python tool/mypubky_canary.py | tee rapport.txt
+          echo "code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: ouvrir une issue
+        if: steps.canary.outputs.code != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Une seule issue ouverte à la fois : sinon la sentinelle en crée une
+          # par semaine tant que personne n'a corrigé, et le signal se noie.
+          existante=$(gh issue list --state open --label mypubky-canary \
+            --json number --jq '.[0].number')
+          corps=$(printf 'La sentinelle a relevé un écart entre ce que Flutky écrit dans la carte mypubky et ce que mypubky.com fait aujourd hui.\n\n```\n%s\n```\n\nExécution : %s/%s/actions/runs/%s\n' \
+            "$(cat rapport.txt)" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")
+          if [ -n "$existante" ]; then
+            gh issue comment "$existante" --body "$corps"
+          else
+            gh issue create \
+              --title "mypubky a changé : ce que Flutky écrit n'est plus aligné" \
+              --label mypubky-canary \
+              --body "$corps"
+          fi
+
+      - name: échouer si un constat est tombé
+        if: steps.canary.outputs.code != '0'
+        run: exit 1

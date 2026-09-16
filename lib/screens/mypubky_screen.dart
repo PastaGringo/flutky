@@ -48,6 +48,11 @@ class _MypubkyScreenState extends State<MypubkyScreen> {
   /// pretending to edit something that exists.
   bool _fresh = false;
 
+  /// What mypubky.com currently serves for each shipped background, read
+  /// from the site while the screen loads so that picking one is instant.
+  /// Empty until it answers, and empty for good if it never does.
+  Map<String, String> _backgroundUrls = const {};
+
   bool get _canWrite => _session.capabilities.any(
         (c) => c.startsWith('/pub/mypubky.com/'),
       );
@@ -56,6 +61,14 @@ class _MypubkyScreenState extends State<MypubkyScreen> {
   void initState() {
     super.initState();
     _load();
+    unawaited(_resolveBackgrounds());
+  }
+
+  /// Fire-and-forget: a background the site could not describe is simply not
+  /// given a URL, and nothing on screen waits for this.
+  Future<void> _resolveBackgrounds() async {
+    final urls = await _client.resolveBuiltInBackgrounds();
+    if (mounted) setState(() => _backgroundUrls = urls);
   }
 
   @override
@@ -315,7 +328,10 @@ class _MypubkyScreenState extends State<MypubkyScreen> {
                         ],
                         onPick: (v) => _change(
                           MypubkyCard.builtInBackgrounds.contains(v)
-                              ? card.withBuiltInBackground(v)
+                              ? card.withBuiltInBackground(
+                                  v,
+                                  resolvedUrl: _backgroundUrls[v],
+                                )
                               // `custom` is only ever re-selected, never
                               // chosen: Flutky cannot upload the file it
                               // stands for, so its URL is left alone.

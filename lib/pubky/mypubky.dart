@@ -168,23 +168,37 @@ class MypubkyCard {
         socials: socials ?? this.socials,
       );
 
-  /// Picks one of the shipped backgrounds by id, and **drops**
-  /// `backgroundUrl`.
+  /// Picks one of the shipped backgrounds by id.
   ///
-  /// Read in mypubky.com's own bundle: it resolves a card with
-  /// `backgroundUrl: A.backgroundUrl || i.src`, where `i` is the built-in
-  /// matching `backgroundId`. So leaving the URL out makes the site resolve
-  /// it, and writing one would pin a build artefact — the shipped files carry
-  /// a content hash (`back2-tNt8deMM.png`) that changes at every deployment.
+  /// [resolvedUrl] is the asset mypubky.com currently serves for that id, read
+  /// out of its own bundle a moment earlier. It is written into the card, the
+  /// way the site's own editor does — which is the point: mypubky always
+  /// writes `backgroundUrl`, so the branch that resolves a card without one is
+  /// a path its own cards never take, and depending on it would mean
+  /// depending on code nobody there exercises.
   ///
-  /// ⚠️ And a stale one fails silently: every name under `/assets/` answers
+  /// Hard-coding the name is not an option either: the shipped files carry a
+  /// content hash (`back2-tNt8deMM.png`) that changes at every deployment.
+  /// Hence reading it live rather than pinning it.
+  ///
+  /// With no [resolvedUrl] — mypubky.com unreachable — the key is dropped
+  /// instead, which falls back on that resolution branch. Worse than writing
+  /// the URL, better than writing a wrong one.
+  ///
+  /// ⚠️ A stale URL fails **silently**: every name under `/assets/` answers
   /// **200**, because the site serves its own index.html for anything it does
   /// not have. Measured — `back1.png` returns 815 bytes of HTML while
-  /// `back1-Bw9dfpD8.png` returns 1 897 348 bytes of PNG. A status code
-  /// proves nothing here.
-  MypubkyCard withBuiltInBackground(String id) => copyWith(
-        changes: {'backgroundId': id, 'backgroundType': 'image'},
-        removals: const {'backgroundUrl'},
+  /// `back1-Bw9dfpD8.png` returns 1 897 348 bytes of PNG. A status code proves
+  /// nothing here, which is why [MypubkyClient.resolveBuiltInBackgrounds]
+  /// checks the media type and the size instead.
+  MypubkyCard withBuiltInBackground(String id, {String? resolvedUrl}) =>
+      copyWith(
+        changes: {
+          'backgroundId': id,
+          'backgroundType': 'image',
+          'backgroundUrl': ?resolvedUrl,
+        },
+        removals: resolvedUrl == null ? const {'backgroundUrl'} : const {},
       );
 }
 
@@ -211,4 +225,57 @@ class MypubkyClient {
     if (body is! Map<String, dynamic>) return null;
     return MypubkyCard.fromJson(pubky, body);
   }
+
+  /// The URL mypubky.com currently serves for each shipped background.
+  ///
+  /// Read from the site itself rather than remembered: the filenames carry a
+  /// build hash, so any value written down here would go stale at their next
+  /// deployment — and go stale without a sound, since a missing asset comes
+  /// back as 200 with the site's index.html. Hence the check on media type
+  /// and length, not on the status code.
+  ///
+  /// Returns an empty map when anything about that chain has changed, which
+  /// the caller reads as "do not write a URL at all".
+  Future<Map<String, String>> resolveBuiltInBackgrounds() async {
+    if (_backgrounds != null) return _backgrounds!;
+    final found = <String, String>{};
+    try {
+      final page = await _client
+          .get(Uri.parse('https://mypubky.com/'))
+          .timeout(const Duration(seconds: 12));
+      final script = RegExp(r'/assets/[A-Za-z0-9._-]+\.js')
+          .firstMatch(utf8.decode(page.bodyBytes))
+          ?.group(0);
+      if (script == null) return _backgrounds = const {};
+
+      final bundle = await _client
+          .get(Uri.parse('https://mypubky.com$script'))
+          .timeout(const Duration(seconds: 20));
+      final text = utf8.decode(bundle.bodyBytes, allowMalformed: true);
+
+      for (final id in MypubkyCard.builtInBackgrounds) {
+        final match =
+            RegExp('assets/$id-[A-Za-z0-9_-]+\\.(png|jpg|jpeg|webp)')
+                .firstMatch(text);
+        if (match == null) continue;
+        final url = 'https://mypubky.com/${match.group(0)}';
+        final head = await _client
+            .head(Uri.parse(url))
+            .timeout(const Duration(seconds: 12));
+        final type = head.headers['content-type'] ?? '';
+        final length = int.tryParse(head.headers['content-length'] ?? '') ?? 0;
+        // The size threshold is what tells a real background from the 815-byte
+        // index.html the site returns for anything it does not have.
+        if (type.startsWith('image/') && length > 100 * 1024) {
+          found[id] = url;
+        }
+      }
+    } catch (_) {
+      // Unreachable, restructured, renamed: all the same answer here, and the
+      // caller writes no URL rather than a guessed one.
+    }
+    return _backgrounds = found;
+  }
+
+  Map<String, String>? _backgrounds;
 }
