@@ -148,6 +148,15 @@ Uri buildSessionUrl(SessionUrlVariant variant) {
   );
 }
 
+/// Hands an arbitrary `pubkyauth://` link to Ring.
+///
+/// Used by the grant flow, whose link the app builds itself rather than
+/// letting Ring compose one — the client key and the relay channel are ours.
+Future<void> openInRing(Uri url) async {
+  final launched = await launchUrl(url, mode: LaunchMode.externalApplication);
+  if (!launched) throw const RingNotReachable();
+}
+
 /// Asks Pubky Ring for a homeserver session.
 ///
 /// Throws [RingNotReachable] when no app answers the `pubkyring` scheme.

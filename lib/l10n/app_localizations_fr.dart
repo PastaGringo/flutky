@@ -770,4 +770,15 @@ class L10nFr extends L10n {
 
   @override
   String get postThreadExpand => 'Afficher le post d\'origine';
+
+  @override
+  String get connectButtonGrant => 'Se connecter avec Pubky Ring';
+
+  @override
+  String get connectButtonCookie =>
+      'Se connecter à l\'ancienne (session cookie)';
+
+  @override
+  String get connectAwaitingApproval =>
+      'En attente de ton approbation dans Pubky Ring. Approuve là-bas et cet écran continue tout seul — Ring n\'a pas besoin de rouvrir Flutky.';
 }

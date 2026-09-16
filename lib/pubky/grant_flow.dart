@@ -43,6 +43,7 @@ import 'package:pinenacl/x25519.dart' as nacl;
 
 import 'blake3.dart';
 import 'endpoints.dart';
+import 'grant_auth.dart';
 import 'z32.dart';
 
 export 'endpoints.dart' show defaultAuthRelay;
@@ -186,6 +187,30 @@ class GrantAuthFlow {
       // decides when to stop, not a single failed look.
       return null;
     }
+  }
+
+  /// Runs the whole handshake and returns a credential in the form the app
+  /// already stores and `HomeserverClient` already reads.
+  ///
+  /// `pubky-grant-credential-v1:<homeserver>:<client seed>:<grant jws>` — the
+  /// same packing pubky-core exports, so nothing downstream has to learn a new
+  /// shape. Note what is kept: the **grant and its key**, never the bearer.
+  /// A bearer lasts an hour; persisting it would save nothing and expire
+  /// immediately.
+  Future<({String pubky, String credential})> completeAndPack(
+    String homeserverKey, {
+    Duration timeout = const Duration(minutes: 3),
+  }) async {
+    final jws = await awaitGrant(timeout: timeout);
+    final claims = GrantClaims.fromJws(jws);
+    final seed = await clientSeed();
+    final packed = [
+      'pubky-grant-credential-v1',
+      homeserverKey,
+      base64Url.encode(seed).replaceAll('=', ''),
+      jws,
+    ].join(':');
+    return (pubky: claims.issuer, credential: packed);
   }
 
   /// The Ed25519 seed of the client key, for signing the proof of possession.

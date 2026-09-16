@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'l10n/app_localizations.dart';
+import 'pubky/endpoints.dart';
+import 'pubky/grant_flow.dart';
 import 'pubky/nexus.dart';
 import 'pubky/ring_session.dart';
 import 'pubky/session_store.dart';
@@ -92,6 +94,10 @@ class _SessionGateState extends State<SessionGate> {
   /// both halves of the exchange can be compared.
   Uri? _lastOutbound;
 
+  /// The grant handshake in progress, if any. Held so it can be closed, and
+  /// so a second tap does not open a second channel.
+  GrantAuthFlow? _grantFlow;
+
   RingSession? _session;
   PubkyProfile? _profile;
   LocalizedError? _error;
@@ -174,6 +180,43 @@ class _SessionGateState extends State<SessionGate> {
     }
   }
 
+  /// Signs in with a grant rather than a cookie.
+  ///
+  /// Nothing comes back through the deep link here: Ring drops the grant on a
+  /// relay channel only this device can name, and the app collects it. The
+  /// x-callback return is not needed and not used — which is why this path
+  /// works even when Ring never reopens the app.
+  Future<void> _connectWithGrant() async {
+    if (_grantFlow != null) return;
+    final flow = await GrantAuthFlow.begin();
+    setState(() {
+      _grantFlow = flow;
+      _error = null;
+      _lastOutbound = flow.authorizationUrl;
+    });
+
+    try {
+      await openInRing(flow.authorizationUrl);
+      final result = await flow.completeAndPack(homeserverPublicKey);
+      final session = RingSession(
+        pubky: result.pubky,
+        grantSecret: result.credential,
+        capabilities: const [flutkyCapabilities],
+      );
+      if (!mounted) return;
+      setState(() => _session = session);
+      unawaited(_store.save(session));
+      await _loadProfile(session.pubky);
+    } on RingNotReachable {
+      if (mounted) setState(() => _error = (l) => l.errorRingUnreachable);
+    } catch (e) {
+      if (mounted) setState(() => _error = (_) => '$e');
+    } finally {
+      flow.close();
+      if (mounted) setState(() => _grantFlow = null);
+    }
+  }
+
   Future<void> _connect(SessionUrlVariant variant) async {
     setState(() {
       _error = null;
@@ -189,6 +232,8 @@ class _SessionGateState extends State<SessionGate> {
   }
 
   void _disconnect() {
+    _grantFlow?.close();
+    _grantFlow = null;
     unawaited(_store.clear());
     setState(() {
       _session = null;
@@ -226,6 +271,8 @@ class _SessionGateState extends State<SessionGate> {
 
     return ConnectScreen(
       busy: _busy,
+      onConnectGrant: () => unawaited(_connectWithGrant()),
+      awaitingGrant: _grantFlow != null,
       error: _error,
       awaitingProfile: session != null,
       outbound: _lastOutbound,

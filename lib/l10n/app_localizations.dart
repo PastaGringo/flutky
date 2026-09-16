@@ -1410,6 +1410,24 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Show the post being answered'**
   String get postThreadExpand;
+
+  /// No description provided for @connectButtonGrant.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with Pubky Ring'**
+  String get connectButtonGrant;
+
+  /// No description provided for @connectButtonCookie.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in the old way (cookie session)'**
+  String get connectButtonCookie;
+
+  /// No description provided for @connectAwaitingApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for your approval in Pubky Ring. Approve there, and this screen carries on by itself — Ring does not need to reopen Flutky.'**
+  String get connectAwaitingApproval;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

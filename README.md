@@ -18,6 +18,7 @@ and building for iOS needs macOS.
 | | |
 |---|---|
 | ✅ | Sign in through **Pubky Ring**, app-to-app, no QR code and nothing to type |
+| ✅ | **Grant sign-in**: a per-app key, revocable on its own — the cookie path pubky-core deprecates is kept as a fallback |
 | ✅ | Session kept in the Android keystore — one trip through Ring, not one per launch |
 | ✅ | Profile: avatar, name, status, bio, links, counters, tags |
 | ✅ | Feed: following, friends, global, bookmarks — paginated, with images |

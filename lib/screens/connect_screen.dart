@@ -15,6 +15,8 @@ class ConnectScreen extends StatelessWidget {
     required this.outbound,
     required this.inbound,
     required this.onConnect,
+    required this.onConnectGrant,
+    required this.awaitingGrant,
     this.onRetry,
   });
 
@@ -29,6 +31,13 @@ class ConnectScreen extends StatelessWidget {
   final List<Uri> inbound;
 
   final void Function(SessionUrlVariant) onConnect;
+
+  /// Starts the grant flow. Offered first because a cookie session is what
+  /// pubky-core marks deprecated and scheduled for removal.
+  final VoidCallback onConnectGrant;
+
+  /// True while waiting for the signer to approve on the relay.
+  final bool awaitingGrant;
   final VoidCallback? onRetry;
 
   @override
@@ -93,13 +102,40 @@ class ConnectScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
+                  ] else if (awaitingGrant) ...[
+                    Panel(
+                      child: Row(
+                        children: [
+                          const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Text(
+                              l.connectAwaitingApproval,
+                              style: const TextStyle(
+                                  color: kTextMuted, height: 1.45),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ] else ...[
                     FilledButton.icon(
-                      onPressed: () => onConnect(SessionUrlVariant.plain),
-                      icon: const Icon(Icons.open_in_new_rounded, size: 20),
-                      label: Text(l.connectButton),
+                      onPressed: onConnectGrant,
+                      icon: const Icon(Icons.verified_user_outlined, size: 20),
+                      label: Text(l.connectButtonGrant),
                     ),
                     const SizedBox(height: 10),
+                    TextButton(
+                      onPressed: () => onConnect(SessionUrlVariant.plain),
+                      child: Text(
+                        l.connectButtonCookie,
+                        style: const TextStyle(color: kTextMuted, fontSize: 13),
+                      ),
+                    ),
                     TextButton(
                       onPressed: () => onConnect(SessionUrlVariant.trailingSlash),
                       child: Text(

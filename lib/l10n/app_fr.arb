@@ -371,5 +371,8 @@
   "composeQuotePublish": "Citer",
   "composeQuoting": "CITATION DE",
   "postThreadCollapse": "Replier le post d'origine",
-  "postThreadExpand": "Afficher le post d'origine"
+  "postThreadExpand": "Afficher le post d'origine",
+  "connectButtonGrant": "Se connecter avec Pubky Ring",
+  "connectButtonCookie": "Se connecter à l'ancienne (session cookie)",
+  "connectAwaitingApproval": "En attente de ton approbation dans Pubky Ring. Approuve là-bas et cet écran continue tout seul — Ring n'a pas besoin de rouvrir Flutky."
 }
