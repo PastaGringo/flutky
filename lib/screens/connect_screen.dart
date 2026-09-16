@@ -123,19 +123,37 @@ class ConnectScreen extends StatelessWidget {
                       ),
                     ),
                   ] else ...[
+                    // Cookie first, grant second — and it is not a preference.
+                    //
+                    // Grant is the better mechanism and the one pubky-core
+                    // recommends, but the Pubky Ring people actually have
+                    // answers "Unrecognized format" to a `signin_grant` link:
+                    // measured on a real phone with the Play Store build, and
+                    // on the published v1.19 binary, whose bundle carries no
+                    // grant parser even though the source tag of that name
+                    // does. Leading with a button that cannot work for anyone
+                    // would make the app look broken.
                     FilledButton.icon(
+                      onPressed: () => onConnect(SessionUrlVariant.plain),
+                      icon: const Icon(Icons.open_in_new_rounded, size: 20),
+                      label: Text(l.connectButton),
+                    ),
+                    const SizedBox(height: 14),
+                    OutlinedButton.icon(
                       onPressed: onConnectGrant,
-                      icon: const Icon(Icons.verified_user_outlined, size: 20),
+                      icon: const Icon(Icons.verified_user_outlined, size: 18),
                       label: Text(l.connectButtonGrant),
                     ),
-                    const SizedBox(height: 10),
-                    TextButton(
-                      onPressed: () => onConnect(SessionUrlVariant.plain),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
                       child: Text(
-                        l.connectButtonCookie,
-                        style: const TextStyle(color: kTextMuted, fontSize: 13),
+                        l.connectGrantNeedsNewerRing,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            color: kTextMuted, fontSize: 12, height: 1.4),
                       ),
                     ),
+                    const SizedBox(height: 6),
                     TextButton(
                       onPressed: () => onConnect(SessionUrlVariant.trailingSlash),
                       child: Text(

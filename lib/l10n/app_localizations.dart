@@ -1414,7 +1414,7 @@ abstract class L10n {
   /// No description provided for @connectButtonGrant.
   ///
   /// In en, this message translates to:
-  /// **'Sign in with Pubky Ring'**
+  /// **'Sign in with a grant'**
   String get connectButtonGrant;
 
   /// No description provided for @connectButtonCookie.
@@ -1434,6 +1434,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'No approval arrived. If Pubky Ring showed “Unrecognized format”, its version does not know grant sign-in yet — use the cookie option below, which still works.'**
   String get errorGrantUnsupported;
+
+  /// No description provided for @connectGrantNeedsNewerRing.
+  ///
+  /// In en, this message translates to:
+  /// **'Better — a key of its own, revocable on its own. Needs a Pubky Ring that knows grant sign-in; the published v1.19 does not yet, and answers “Unrecognized format”.'**
+  String get connectGrantNeedsNewerRing;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

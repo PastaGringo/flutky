@@ -772,7 +772,7 @@ class L10nFr extends L10n {
   String get postThreadExpand => 'Afficher le post d\'origine';
 
   @override
-  String get connectButtonGrant => 'Se connecter avec Pubky Ring';
+  String get connectButtonGrant => 'Se connecter par grant';
 
   @override
   String get connectButtonCookie =>
@@ -785,4 +785,8 @@ class L10nFr extends L10n {
   @override
   String get errorGrantUnsupported =>
       'Aucune approbation n\'est arrivée. Si Pubky Ring a affiché « Unrecognized format », sa version ne connaît pas encore la connexion par grant — utilise l\'option cookie ci-dessous, qui fonctionne toujours.';
+
+  @override
+  String get connectGrantNeedsNewerRing =>
+      'Mieux — une clé propre à l\'app, révocable seule. Demande un Pubky Ring qui connaît le grant ; la v1.19 publiée ne le connaît pas encore et répond « Unrecognized format ».';
 }

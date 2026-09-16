@@ -771,7 +771,7 @@ class L10nEn extends L10n {
   String get postThreadExpand => 'Show the post being answered';
 
   @override
-  String get connectButtonGrant => 'Sign in with Pubky Ring';
+  String get connectButtonGrant => 'Sign in with a grant';
 
   @override
   String get connectButtonCookie => 'Sign in the old way (cookie session)';
@@ -783,4 +783,8 @@ class L10nEn extends L10n {
   @override
   String get errorGrantUnsupported =>
       'No approval arrived. If Pubky Ring showed “Unrecognized format”, its version does not know grant sign-in yet — use the cookie option below, which still works.';
+
+  @override
+  String get connectGrantNeedsNewerRing =>
+      'Better — a key of its own, revocable on its own. Needs a Pubky Ring that knows grant sign-in; the published v1.19 does not yet, and answers “Unrecognized format”.';
 }
