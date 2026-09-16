@@ -257,18 +257,6 @@ class HomeserverClient {
     return 'pubky://${session.pubky}/pub/pubky.app/files/$fileId';
   }
 
-  /// Writes a JSON document at an arbitrary `/pub/` path.
-  ///
-  /// Used for another application's files — a mypubky card, say. The path is
-  /// not this app's to invent, so it is passed in whole rather than built
-  /// from a resource name, and the grant must already carry the capability
-  /// that covers it or the homeserver answers 401.
-  Future<void> putJson(String path, Map<String, dynamic> body) => _put(
-        path,
-        utf8.encode(jsonEncode(body)),
-        contentType: 'application/json',
-      );
-
   /// One authenticated write, with the refusals told apart.
   Future<void> _put(
     String path,

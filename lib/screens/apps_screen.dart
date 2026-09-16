@@ -4,7 +4,6 @@ import '../l10n/app_localizations.dart';
 import '../pubky/ring_session.dart';
 import '../theme.dart';
 import 'eventky_screen.dart';
-import 'mypubky_screen.dart';
 
 /// Other Pubky applications, seen from inside Flutky.
 ///
@@ -18,18 +17,9 @@ import 'mypubky_screen.dart';
 /// would need the grant widened to that app's folder — Ring shows each folder
 /// on its own line — and that is asked for when it is needed, not at sign-in.
 class AppsScreen extends StatelessWidget {
-  const AppsScreen({
-    super.key,
-    required this.session,
-    required this.onSessionChanged,
-  });
+  const AppsScreen({super.key, required this.session});
 
   final RingSession session;
-
-  /// A widened grant, when one of these screens asks for it. It has to travel
-  /// back to the top: a credential kept where it was obtained would be lost
-  /// on the way back out of the screen.
-  final void Function(RingSession) onSessionChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -51,21 +41,6 @@ class AppsScreen extends StatelessWidget {
           onOpen: () => Navigator.of(context).push(
             MaterialPageRoute<void>(
               builder: (_) => EventkyScreen(session: session),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        _AppTile(
-          icon: Icons.badge_outlined,
-          name: 'mypubky',
-          summary: l.appsMypubkySummary,
-          namespace: '/pub/mypubky.com/',
-          onOpen: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => MypubkyScreen(
-                session: session,
-                onSessionChanged: onSessionChanged,
-              ),
             ),
           ),
         ),

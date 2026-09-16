@@ -237,16 +237,6 @@ class _SessionGateState extends State<SessionGate> {
     }
   }
 
-  /// Takes a grant widened deeper in the app and makes it the session.
-  ///
-  /// Stored as well as held in memory: a wider grant obtained for one screen
-  /// would otherwise have to be asked for again at the next launch, which
-  /// turns a one-off approval into a recurring one.
-  void _replaceSession(RingSession session) {
-    setState(() => _session = session);
-    unawaited(_store.save(session));
-  }
-
   void _disconnect() {
     _grantFlow?.close();
     _grantFlow = null;
@@ -282,7 +272,6 @@ class _SessionGateState extends State<SessionGate> {
         preferences: widget.preferences,
         onRefreshProfile: () => _loadProfile(session.pubky),
         onDisconnect: _disconnect,
-        onSessionChanged: _replaceSession,
       );
     }
 

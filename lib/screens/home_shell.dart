@@ -34,7 +34,6 @@ class HomeShell extends StatefulWidget {
     required this.preferences,
     required this.onRefreshProfile,
     required this.onDisconnect,
-    required this.onSessionChanged,
   });
 
   final NexusClient nexus;
@@ -45,10 +44,6 @@ class HomeShell extends StatefulWidget {
   final FeedPreferences preferences;
   final Future<void> Function() onRefreshProfile;
   final VoidCallback onDisconnect;
-
-  /// A grant widened from inside a tab, on its way back to where sessions are
-  /// stored.
-  final void Function(RingSession) onSessionChanged;
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -296,10 +291,7 @@ class _HomeShellState extends State<HomeShell> {
               session: widget.session,
             ),
             const MessagesScreen(),
-            AppsScreen(
-              session: widget.session,
-              onSessionChanged: widget.onSessionChanged,
-            ),
+            AppsScreen(session: widget.session),
           ],
         ),
       ),
