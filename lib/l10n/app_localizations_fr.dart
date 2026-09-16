@@ -794,7 +794,7 @@ class L10nFr extends L10n {
   String get tabApps => 'Apps';
 
   @override
-  String get titleApps => 'Applications Pubky';
+  String get titleApps => 'Apps';
 
   @override
   String get appsIntro =>
@@ -825,4 +825,29 @@ class L10nFr extends L10n {
 
   @override
   String get eventkyMaybe => 'Peut-être';
+
+  @override
+  String get composeEditTitle => 'Modifier le post';
+
+  @override
+  String get composeEditSave => 'Enregistrer';
+
+  @override
+  String get postEdit => 'Modifier';
+
+  @override
+  String get postDelete => 'Supprimer';
+
+  @override
+  String get postDeleteTitle => 'Supprimer ce post ?';
+
+  @override
+  String get postDeleteBody =>
+      'Il quitte ton homeserver et l\'indexeur l\'oublie. Ce que d\'autres clients ont déjà récupéré reste récupéré — une suppression ici n\'est pas une suppression partout.';
+
+  @override
+  String get postDeleted => 'Post supprimé.';
+
+  @override
+  String get postEdited => 'Post modifié.';
 }

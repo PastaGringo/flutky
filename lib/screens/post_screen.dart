@@ -231,6 +231,9 @@ class _PostScreenState extends State<PostScreen> {
                       _parent == null ? null : _profiles[_parent!.author],
                   session: widget.session,
                   onChanged: () => unawaited(_reloadSoon()),
+                  // Deleting the subject of the thread leaves a screen of
+                  // answers to nothing, so the screen goes with it.
+                  onDeleted: () => Navigator.of(context).maybePop(),
                 ),
                 const SizedBox(height: 20),
                 Text(

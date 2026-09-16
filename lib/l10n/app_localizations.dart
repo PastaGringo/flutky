@@ -1450,7 +1450,7 @@ abstract class L10n {
   /// No description provided for @titleApps.
   ///
   /// In en, this message translates to:
-  /// **'Pubky apps'**
+  /// **'Apps'**
   String get titleApps;
 
   /// No description provided for @appsIntro.
@@ -1506,6 +1506,54 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Maybe'**
   String get eventkyMaybe;
+
+  /// No description provided for @composeEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit post'**
+  String get composeEditTitle;
+
+  /// No description provided for @composeEditSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get composeEditSave;
+
+  /// No description provided for @postEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get postEdit;
+
+  /// No description provided for @postDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get postDelete;
+
+  /// No description provided for @postDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this post?'**
+  String get postDeleteTitle;
+
+  /// No description provided for @postDeleteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It goes from your homeserver, and the indexer drops it. What other clients already fetched stays fetched — a deletion here is not a deletion everywhere.'**
+  String get postDeleteBody;
+
+  /// No description provided for @postDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Post deleted.'**
+  String get postDeleted;
+
+  /// No description provided for @postEdited.
+  ///
+  /// In en, this message translates to:
+  /// **'Post edited.'**
+  String get postEdited;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

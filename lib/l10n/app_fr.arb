@@ -378,7 +378,7 @@
   "errorGrantUnsupported": "Aucune approbation n'est arrivée. Si Pubky Ring a affiché « Unrecognized format », sa version ne connaît pas encore la connexion par grant — utilise l'option cookie ci-dessous, qui fonctionne toujours.",
   "connectGrantNeedsNewerRing": "Mieux — une clé propre à l'app, révocable seule. Demande un Pubky Ring qui connaît le grant : la v1.19 publiée répond « Unrecognized format ». Une reconstruction qui le connaît est dans les releases du projet.",
   "tabApps": "Apps",
-  "titleApps": "Applications Pubky",
+  "titleApps": "Apps",
   "appsIntro": "D'autres applications Pubky, lues depuis Flutky. Pas des liens vers l'extérieur : leurs données vivent sous ta propre clé, elles peuvent donc s'afficher ici.",
   "appsEventkySummary": "Événements et calendriers",
   "appsReadOnlyTitle": "Lire ne coûte rien",
@@ -387,5 +387,13 @@
   "eventkyNoDate": "Sans date",
   "eventkyGoing": "Inscrit",
   "eventkyNotGoing": "Décliné",
-  "eventkyMaybe": "Peut-être"
+  "eventkyMaybe": "Peut-être",
+  "composeEditTitle": "Modifier le post",
+  "composeEditSave": "Enregistrer",
+  "postEdit": "Modifier",
+  "postDelete": "Supprimer",
+  "postDeleteTitle": "Supprimer ce post ?",
+  "postDeleteBody": "Il quitte ton homeserver et l'indexeur l'oublie. Ce que d'autres clients ont déjà récupéré reste récupéré — une suppression ici n'est pas une suppression partout.",
+  "postDeleted": "Post supprimé.",
+  "postEdited": "Post modifié."
 }

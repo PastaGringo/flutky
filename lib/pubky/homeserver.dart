@@ -352,6 +352,44 @@ class HomeserverClient {
   Future<String> repost(String postUri) =>
       createShortPost('', embed: postUri);
 
+  /// Rewrites a post that already exists.
+  ///
+  /// There is no separate "edit" verb: a post lives at
+  /// `/pub/pubky.app/posts/<id>`, and editing is writing that path again. The
+  /// id is a timestamp, so it keeps the original creation time — which is the
+  /// point, and why the id must **not** be regenerated.
+  ///
+  /// Nexus notices and emits a `post_edited` notification of its own.
+  Future<void> editPost(
+    String id,
+    String content, {
+    List<String> attachments = const [],
+    String? parent,
+    String? embed,
+  }) async {
+    final trimmed = content.trim();
+    if (trimmed.isEmpty && attachments.isEmpty) {
+      throw ArgumentError('Un post vide ne peut pas être publié.');
+    }
+    if (trimmed.length > maxShortPostLength) {
+      throw ArgumentError(
+        'Un post court est limité à $maxShortPostLength caractères '
+        '(${trimmed.length} ici).',
+      );
+    }
+    await _put(
+      '/pub/pubky.app/posts/$id',
+      utf8.encode(jsonEncode({
+        'content': trimmed,
+        'kind': attachments.isEmpty ? 'short' : 'image',
+        if (attachments.isNotEmpty) 'attachments': attachments,
+        'parent': ?parent,
+        if (embed != null) 'embed': {'kind': 'short', 'uri': embed},
+      })),
+      contentType: 'application/json',
+    );
+  }
+
   /// Follows an account.
   ///
   /// The resource is named after the target key — no computed id — and its
@@ -414,6 +452,12 @@ class HomeserverClient {
     }
   }
 
+  /// Removes a post from the homeserver.
+  ///
+  /// What this does not do: reach the copies. The homeserver forgets it and
+  /// Nexus drops it from its index, but anything another client already
+  /// fetched stays fetched. The interface says so before asking to confirm —
+  /// promising a deletion that only holds in one place would be a lie.
   Future<void> deletePost(String id) async {
     final res = await _client
         .delete(_entry('/pub/pubky.app/posts/$id'), headers: await _authHeaders())
@@ -421,7 +465,10 @@ class HomeserverClient {
     if (res.statusCode == 401 || res.statusCode == 403) {
       throw WriteUnauthorized(res.statusCode, _shorten(res.body), authKind);
     }
-    if (res.statusCode >= 400) {
+    // A 404 is success from where the caller stands: the post is not there.
+    // Failing on it would turn a second tap — or a retry after a lost
+    // response — into an error about something that already worked.
+    if (res.statusCode >= 400 && res.statusCode != 404) {
       throw WriteFailed(res.statusCode, _shorten(res.body));
     }
   }

@@ -792,7 +792,7 @@ class L10nEn extends L10n {
   String get tabApps => 'Apps';
 
   @override
-  String get titleApps => 'Pubky apps';
+  String get titleApps => 'Apps';
 
   @override
   String get appsIntro =>
@@ -823,4 +823,29 @@ class L10nEn extends L10n {
 
   @override
   String get eventkyMaybe => 'Maybe';
+
+  @override
+  String get composeEditTitle => 'Edit post';
+
+  @override
+  String get composeEditSave => 'Save';
+
+  @override
+  String get postEdit => 'Edit';
+
+  @override
+  String get postDelete => 'Delete';
+
+  @override
+  String get postDeleteTitle => 'Delete this post?';
+
+  @override
+  String get postDeleteBody =>
+      'It goes from your homeserver, and the indexer drops it. What other clients already fetched stays fetched — a deletion here is not a deletion everywhere.';
+
+  @override
+  String get postDeleted => 'Post deleted.';
+
+  @override
+  String get postEdited => 'Post edited.';
 }

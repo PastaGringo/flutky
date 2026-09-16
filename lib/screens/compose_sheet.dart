@@ -36,6 +36,20 @@ Future<PublishedPost?> showComposeSheet(
   required String uiLanguage,
   String deepLKey = '',
   String initialContent = '',
+  /// The post being rewritten, when this is an edit rather than a new post.
+  ///
+  /// Editing keeps the id, and the id carries the creation time — so a post
+  /// stays where it was in everyone's timeline instead of jumping to the top.
+  String? editingPostId,
+  /// Aliases to seed, so a mention already in the text shows as `@Name`
+  /// rather than as its fifty-seven characters on the wire.
+  Map<String, String> initialAliases = const {},
+  /// Files the post already carries, when editing one.
+  ///
+  /// Kept unless a new picture is chosen: a post rewritten to fix a typo must
+  /// not lose its image, and the editor has no way to re-upload one it never
+  /// downloaded.
+  List<String> initialAttachments = const [],
   /// A mention to insert on opening, as `(key, name)`.
   ///
   /// Not folded into [initialContent]: that one is raw text, and a mention
@@ -67,6 +81,9 @@ Future<PublishedPost?> showComposeSheet(
         uiLanguage: uiLanguage,
         deepLKey: deepLKey,
         initialContent: initialContent,
+        editingPostId: editingPostId,
+        initialAliases: initialAliases,
+        initialAttachments: initialAttachments,
         initialMention: initialMention,
         parent: parent,
         quote: quote,
@@ -82,6 +99,9 @@ class _ComposeSheet extends StatefulWidget {
     required this.uiLanguage,
     required this.deepLKey,
     required this.initialContent,
+    required this.editingPostId,
+    required this.initialAliases,
+    required this.initialAttachments,
     required this.initialMention,
     required this.parent,
     required this.quote,
@@ -94,6 +114,9 @@ class _ComposeSheet extends StatefulWidget {
   final String uiLanguage;
   final String deepLKey;
   final String initialContent;
+  final String? editingPostId;
+  final Map<String, String> initialAliases;
+  final List<String> initialAttachments;
   final ({String pubky, String name})? initialMention;
   final String? parent;
   final String? quote;
@@ -238,6 +261,7 @@ class _ComposeSheetState extends State<_ComposeSheet> {
   void initState() {
     super.initState();
     _checkAccess();
+    _aliases.addAll(widget.initialAliases);
     final mention = widget.initialMention;
     if (mention != null) {
       _insertMention(mention.pubky, mention.name);
@@ -366,8 +390,11 @@ class _ComposeSheetState extends State<_ComposeSheet> {
       // The picture goes up first: the post has to point at a file that
       // already exists, and a post published before its image would render
       // broken for everyone who read it in between.
-      final attachments = <String>[];
+      // What the post already carried, replaced only when a new picture was
+      // chosen — an edit that silently drops an image is worse than no edit.
+      final attachments = <String>[...widget.initialAttachments];
       if (image != null) {
+        attachments.clear();
         if (mounted) setState(() => _uploadProgress = 0.5);
         attachments.add(await client.uploadImage(
           image,
@@ -377,12 +404,28 @@ class _ComposeSheetState extends State<_ComposeSheet> {
       }
       if (mounted) setState(() => _uploadProgress = 1);
 
-      final id = await client.createShortPost(
-        content,
-        attachments: attachments,
-        parent: widget.parent,
-        embed: widget.quote,
-      );
+      final editing = widget.editingPostId;
+      final String id;
+      if (editing != null) {
+        // Editing keeps the id, and the id carries the creation time — so the
+        // post stays where it was in everyone's timeline instead of jumping
+        // to the top as a new one.
+        await client.editPost(
+          editing,
+          content,
+          attachments: attachments,
+          parent: widget.parent,
+          embed: widget.quote,
+        );
+        id = editing;
+      } else {
+        id = await client.createShortPost(
+          content,
+          attachments: attachments,
+          parent: widget.parent,
+          embed: widget.quote,
+        );
+      }
 
       // The 201 alone is not proof: read it back from the homeserver, which
       // is the only source that answers immediately after a write.
@@ -429,9 +472,10 @@ class _ComposeSheetState extends State<_ComposeSheet> {
           Row(
             children: [
               Text(
-                switch ((widget.parent, widget.quote)) {
-                  (final String _, _) => l.composeReplyTitle,
-                  (_, final String _) => l.composeQuoteTitle,
+                switch ((widget.editingPostId, widget.parent, widget.quote)) {
+                  (final String _, _, _) => l.composeEditTitle,
+                  (_, final String _, _) => l.composeReplyTitle,
+                  (_, _, final String _) => l.composeQuoteTitle,
                   _ => l.composeTitle,
                 },
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 17),
@@ -582,9 +626,10 @@ class _ComposeSheetState extends State<_ComposeSheet> {
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : Text(switch ((widget.parent, widget.quote)) {
-                    (final String _, _) => l.composeReplyPublish,
-                    (_, final String _) => l.composeQuotePublish,
+                : Text(switch ((widget.editingPostId, widget.parent, widget.quote)) {
+                    (final String _, _, _) => l.composeEditSave,
+                    (_, final String _, _) => l.composeReplyPublish,
+                    (_, _, final String _) => l.composeQuotePublish,
                     _ => l.composePublish,
                   }),
           ),

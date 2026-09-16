@@ -217,6 +217,22 @@ class PubkyPost {
   /// Same, for a reply.
   final String? repliedUri;
 
+  /// The same post with new words, for the seconds between an edit landing on
+  /// the homeserver and the indexer catching up. Everything else is unchanged
+  /// on purpose: an edit keeps the id, the author, the counters and the tags.
+  PubkyPost withContent(String content, List<String> attachments) => PubkyPost(
+        id: id,
+        author: author,
+        content: content,
+        kind: attachments.isEmpty ? 'short' : 'image',
+        attachments: attachments,
+        counts: counts,
+        tags: tags,
+        indexedAt: indexedAt,
+        repostedUri: repostedUri,
+        repliedUri: repliedUri,
+      );
+
   bool get isRepost => repostedUri != null;
   bool get isReply => repliedUri != null;
 

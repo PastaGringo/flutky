@@ -377,6 +377,13 @@ class _FeedScreenState extends State<FeedScreen> {
                           // A post the indexer has not seen has no thread to
                           // open yet, so it stays inert until it does.
                           onOpen: isPending ? null : () => _open(post),
+                          // Taken out of the list rather than left as an empty
+                          // card: the separators around it would otherwise
+                          // leave a hole where the post used to be.
+                          onDeleted: () => setState(() {
+                            _pending.removeWhere((p) => p.id == post.id);
+                            _posts.removeWhere((p) => p.id == post.id);
+                          }),
                         );
                       },
                     ),

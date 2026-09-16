@@ -41,6 +41,7 @@ class PostCard extends StatefulWidget {
     this.onOpen,
     this.hideQuote = false,
     this.onChanged,
+    this.onDeleted,
   });
 
   final PubkyPost post;
@@ -61,6 +62,12 @@ class PostCard extends StatefulWidget {
   /// Opens the thread. Absent inside the thread itself, where tapping a card
   /// to reach the screen you are already on is a dead end.
   final VoidCallback? onOpen;
+
+  /// The post was deleted from this card.
+  ///
+  /// The card stops drawing itself either way; this is for the screen that
+  /// would otherwise be left showing a thread whose subject no longer exists.
+  final VoidCallback? onDeleted;
 
   /// Hides what the post points at — the quoted block of a repost, the arrow
   /// of a reply.
@@ -126,7 +133,22 @@ class _PostCardState extends State<PostCard> {
   /// but a long parent above every reply is a lot of feed, so it folds.
   bool _parentCollapsed = false;
 
+  /// Deleted from here. The card keeps its place in the widget tree but draws
+  /// nothing: a post that answered 204 and stays on screen reads as a button
+  /// that did not work.
+  bool _deleted = false;
+
   PubkyPost get post => _fresh ?? widget.post;
+
+  /// Editing and deleting are the reader's own business, and the homeserver
+  /// only accepts them under the author's key — offering them on someone
+  /// else's post would be a button whose only outcome is 403.
+  ///
+  /// Unlike the other writes this does not wait for indexing: the post is on
+  /// the homeserver the moment it is published, and the typo one wants to fix
+  /// is never more visible than in the seconds just after.
+  bool get _mine =>
+      widget.session != null && post.author == widget.session!.pubky;
 
   /// A post the indexer has not seen has no thread and no counters yet, and a
   /// card without a session is a reader's view.
@@ -301,6 +323,106 @@ class _PostCardState extends State<PostCard> {
     unawaited(_refreshSoon());
   }
 
+  /// Reopens the post in the composer, and rewrites it in place.
+  ///
+  /// The mentions go back to `@Name` on the way in and to their keys on the
+  /// way out: the editor never shows the fifty-seven characters a mention
+  /// really is, and an edit that did would leave them to be worked around.
+  Future<void> _edit() async {
+    final session = widget.session;
+    if (session == null) return;
+    final l = L10n.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    final aliases = <String, String>{};
+    var text = post.content;
+    for (final key in mentionedKeys(post.content)) {
+      final alias = aliasForMention(
+        key,
+        PostCard.displayName(widget.profiles[key], key, l),
+        aliases,
+      );
+      aliases[alias] = key;
+      text = text.replaceAll('pubky$key', alias);
+    }
+
+    final published = await showComposeSheet(
+      context,
+      session: session,
+      nexus: widget.nexus,
+      uiLanguage: Localizations.localeOf(context).languageCode,
+      deepLKey: PreferencesScope.maybeOf(context)?.deepLKey ?? '',
+      editingPostId: post.id,
+      initialContent: text,
+      initialAliases: aliases,
+      initialAttachments: post.attachments,
+      // Kept, or the rewrite would turn a reply into a loose post and a quote
+      // into a bare one — the wire carries those as fields of the post itself.
+      parent: post.repliedUri,
+      quote: post.repostedUri,
+      quotedPost: widget.quoted,
+      quotedAuthor: widget.quotedAuthor,
+    );
+    if (published == null || !mounted) return;
+
+    // Shown straight away from what was written, because Nexus is a second or
+    // two behind and the card would otherwise still read as the old text.
+    setState(() => _fresh = post.withContent(
+          published.content,
+          published.attachments,
+        ));
+    messenger.showSnackBar(SnackBar(content: Text(l.postEdited)));
+    unawaited(widget.nexus.requestIngest(session.pubky));
+    widget.onChanged?.call();
+    unawaited(_refreshSoon());
+  }
+
+  Future<void> _delete() async {
+    final session = widget.session;
+    if (session == null || _busy) return;
+    final l = L10n.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: kSurface,
+        title: Text(l.postDeleteTitle),
+        content: Text(l.postDeleteBody,
+            style: const TextStyle(color: kTextMuted, height: 1.5)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l.actionCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l.postDelete,
+                style: const TextStyle(color: kDanger)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _busy = true);
+    final client = HomeserverClient(session: session);
+    try {
+      await client.deletePost(post.id);
+      if (!mounted) return;
+      setState(() => _deleted = true);
+      messenger.showSnackBar(SnackBar(content: Text(l.postDeleted)));
+      unawaited(widget.nexus.requestIngest(session.pubky));
+      widget.onDeleted?.call();
+      widget.onChanged?.call();
+    } catch (e) {
+      if (mounted) messenger.showSnackBar(SnackBar(content: Text('$e')));
+    } finally {
+      client.close();
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   /// Applies a label, or removes it when this account already applied it.
   Future<void> _toggleTag(String label) async {
     final session = widget.session;
@@ -412,6 +534,7 @@ class _PostCardState extends State<PostCard> {
 
   @override
   Widget build(BuildContext context) {
+    if (_deleted) return const SizedBox.shrink();
     final l = L10n.of(context);
     final profiles = widget.profiles;
     final pending = widget.pending;
@@ -529,6 +652,8 @@ class _PostCardState extends State<PostCard> {
             onTranslate: (post.content.isEmpty || pending) ? null : _translate,
             translating: _translating,
             translated: _translated != null,
+            onEdit: _mine ? _edit : null,
+            onDelete: _mine && !_busy ? _delete : null,
           ),
         ],
       ),
@@ -1060,6 +1185,8 @@ class _Actions extends StatelessWidget {
     required this.onTranslate,
     required this.translating,
     required this.translated,
+    this.onEdit,
+    this.onDelete,
   });
 
   final PubkyPost post;
@@ -1070,6 +1197,8 @@ class _Actions extends StatelessWidget {
   final VoidCallback? onTranslate;
   final bool translating;
   final bool translated;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -1124,6 +1253,52 @@ class _Actions extends StatelessWidget {
                           color: translated ? kAccent : kTextMuted,
                         ),
                 ),
+              ),
+            ),
+          if (onEdit != null || onDelete != null)
+            SizedBox(
+              width: 30,
+              height: 30,
+              child: PopupMenuButton<String>(
+                color: kSurface,
+                icon: const Icon(Icons.more_horiz_rounded,
+                    size: 17, color: kTextMuted),
+                iconSize: 17,
+                padding: EdgeInsets.zero,
+                tooltip: '',
+                onSelected: (value) {
+                  if (value == 'edit') onEdit?.call();
+                  if (value == 'delete') onDelete?.call();
+                },
+                itemBuilder: (context) => [
+                  if (onEdit != null)
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.edit_outlined,
+                              size: 17, color: kTextMuted),
+                          const SizedBox(width: 11),
+                          Text(l.postEdit,
+                              style: const TextStyle(fontSize: 14)),
+                        ],
+                      ),
+                    ),
+                  if (onDelete != null)
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.delete_outline_rounded,
+                              size: 17, color: kDanger),
+                          const SizedBox(width: 11),
+                          Text(l.postDelete,
+                              style: const TextStyle(
+                                  fontSize: 14, color: kDanger)),
+                        ],
+                      ),
+                    ),
+                ],
               ),
             ),
         ],

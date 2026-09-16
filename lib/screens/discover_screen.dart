@@ -250,6 +250,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                       ),
                     ),
                   ),
+                  onDeleted: () =>
+                      setState(() => _posts.removeWhere((p) => p.id == post.id)),
                 );
               },
             ),
