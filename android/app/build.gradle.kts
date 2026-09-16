@@ -64,9 +64,15 @@ android {
     // time is the only filter that applies to every source of native code.
     //
     // Emulators are the only x86 Android there is; no phone needs these.
+    // Emulators are the only x86 Android there is, so a release drops those
+    // libraries — 18 MB that no phone can use. A build for an emulator needs
+    // them back, hence the switch rather than a line to comment out and
+    // forget:  flutter build apk --release -Pemulator=true
     packaging {
         jniLibs {
-            excludes += listOf("lib/x86/**", "lib/x86_64/**")
+            if (!project.hasProperty("emulator")) {
+                excludes += listOf("lib/x86/**", "lib/x86_64/**")
+            }
         }
     }
 
