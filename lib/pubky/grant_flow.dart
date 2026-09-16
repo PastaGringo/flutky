@@ -61,8 +61,19 @@ const _nonceLength = 24;
 
 /// Something went wrong before any grant could be obtained.
 class GrantFlowError implements Exception {
-  const GrantFlowError(this.message);
+  const GrantFlowError(this.message, {this.timedOut = false});
   final String message;
+
+  /// Nothing ever landed on the relay channel.
+  ///
+  /// Worth telling apart, because the likeliest cause is not a mistake by the
+  /// person: **a Ring that does not know `signin_grant` shows "Unrecognized
+  /// format" on its own screen and posts nothing**, leaving this side waiting
+  /// for something that will never come. Measured on the published v1.19
+  /// binary, whose bundle carries no grant parser even though the source tag
+  /// of the same name does.
+  final bool timedOut;
+
   @override
   String toString() => message;
 }
@@ -162,7 +173,10 @@ class GrantAuthFlow {
   /// nothing simply means the person has not approved yet. [timeout] bounds
   /// the wait so a link that was never opened does not hang forever.
   Future<String> awaitGrant({
-    Duration timeout = const Duration(minutes: 3),
+    // Two minutes, not three: the wait that matters is a person tapping a
+    // button they can already see. Beyond that it is almost always a Ring
+    // that never understood the request.
+    Duration timeout = const Duration(minutes: 2),
     Duration interval = const Duration(seconds: 2),
   }) async {
     final deadline = DateTime.now().add(timeout);
@@ -171,7 +185,7 @@ class GrantAuthFlow {
       if (payload != null) return decryptGrant(payload, clientSecret);
       await Future<void>.delayed(interval);
     }
-    throw const GrantFlowError('Aucune approbation reçue.');
+    throw const GrantFlowError('Aucune approbation reçue.', timedOut: true);
   }
 
   /// One look at the channel. Null when there is nothing yet.

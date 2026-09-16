@@ -433,5 +433,6 @@
   "postThreadExpand": "Show the post being answered",
   "connectButtonGrant": "Sign in with Pubky Ring",
   "connectButtonCookie": "Sign in the old way (cookie session)",
-  "connectAwaitingApproval": "Waiting for your approval in Pubky Ring. Approve there, and this screen carries on by itself — Ring does not need to reopen Flutky."
+  "connectAwaitingApproval": "Waiting for your approval in Pubky Ring. Approve there, and this screen carries on by itself — Ring does not need to reopen Flutky.",
+  "errorGrantUnsupported": "No approval arrived. If Pubky Ring showed “Unrecognized format”, its version does not know grant sign-in yet — use the cookie option below, which still works."
 }

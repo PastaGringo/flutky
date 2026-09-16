@@ -209,6 +209,12 @@ class _SessionGateState extends State<SessionGate> {
       await _loadProfile(session.pubky);
     } on RingNotReachable {
       if (mounted) setState(() => _error = (l) => l.errorRingUnreachable);
+    } on GrantFlowError catch (e) {
+      if (mounted) {
+        setState(() => _error = e.timedOut
+            ? (l) => l.errorGrantUnsupported
+            : (_) => '$e');
+      }
     } catch (e) {
       if (mounted) setState(() => _error = (_) => '$e');
     } finally {

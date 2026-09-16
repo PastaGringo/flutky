@@ -779,4 +779,8 @@ class L10nEn extends L10n {
   @override
   String get connectAwaitingApproval =>
       'Waiting for your approval in Pubky Ring. Approve there, and this screen carries on by itself — Ring does not need to reopen Flutky.';
+
+  @override
+  String get errorGrantUnsupported =>
+      'No approval arrived. If Pubky Ring showed “Unrecognized format”, its version does not know grant sign-in yet — use the cookie option below, which still works.';
 }

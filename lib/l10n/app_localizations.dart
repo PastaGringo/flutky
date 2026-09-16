@@ -1428,6 +1428,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Waiting for your approval in Pubky Ring. Approve there, and this screen carries on by itself — Ring does not need to reopen Flutky.'**
   String get connectAwaitingApproval;
+
+  /// No description provided for @errorGrantUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'No approval arrived. If Pubky Ring showed “Unrecognized format”, its version does not know grant sign-in yet — use the cookie option below, which still works.'**
+  String get errorGrantUnsupported;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {
