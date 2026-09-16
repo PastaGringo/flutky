@@ -1438,7 +1438,7 @@ abstract class L10n {
   /// No description provided for @connectGrantNeedsNewerRing.
   ///
   /// In en, this message translates to:
-  /// **'Better — a key of its own, revocable on its own. Needs a Pubky Ring that knows grant sign-in; the published v1.19 does not yet, and answers “Unrecognized format”.'**
+  /// **'Better — a key of its own, revocable on its own. Needs a Pubky Ring that knows grant sign-in: the published v1.19 answers “Unrecognized format”. A rebuild that does know it is in this project\'s releases.'**
   String get connectGrantNeedsNewerRing;
 }
 

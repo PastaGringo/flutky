@@ -786,5 +786,5 @@ class L10nEn extends L10n {
 
   @override
   String get connectGrantNeedsNewerRing =>
-      'Better — a key of its own, revocable on its own. Needs a Pubky Ring that knows grant sign-in; the published v1.19 does not yet, and answers “Unrecognized format”.';
+      'Better — a key of its own, revocable on its own. Needs a Pubky Ring that knows grant sign-in: the published v1.19 answers “Unrecognized format”. A rebuild that does know it is in this project\'s releases.';
 }

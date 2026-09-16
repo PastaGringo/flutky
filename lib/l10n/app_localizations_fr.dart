@@ -788,5 +788,5 @@ class L10nFr extends L10n {
 
   @override
   String get connectGrantNeedsNewerRing =>
-      'Mieux — une clé propre à l\'app, révocable seule. Demande un Pubky Ring qui connaît le grant ; la v1.19 publiée ne le connaît pas encore et répond « Unrecognized format ».';
+      'Mieux — une clé propre à l\'app, révocable seule. Demande un Pubky Ring qui connaît le grant : la v1.19 publiée répond « Unrecognized format ». Une reconstruction qui le connaît est dans les releases du projet.';
 }

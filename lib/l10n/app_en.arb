@@ -435,5 +435,5 @@
   "connectButtonCookie": "Sign in the old way (cookie session)",
   "connectAwaitingApproval": "Waiting for your approval in Pubky Ring. Approve there, and this screen carries on by itself — Ring does not need to reopen Flutky.",
   "errorGrantUnsupported": "No approval arrived. If Pubky Ring showed “Unrecognized format”, its version does not know grant sign-in yet — use the cookie option below, which still works.",
-  "connectGrantNeedsNewerRing": "Better — a key of its own, revocable on its own. Needs a Pubky Ring that knows grant sign-in; the published v1.19 does not yet, and answers “Unrecognized format”."
+  "connectGrantNeedsNewerRing": "Better — a key of its own, revocable on its own. Needs a Pubky Ring that knows grant sign-in: the published v1.19 answers “Unrecognized format”. A rebuild that does know it is in this project's releases."
 }
