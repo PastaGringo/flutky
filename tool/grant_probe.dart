@@ -27,7 +27,11 @@ import 'package:flutky/pubky/endpoints.dart';
 import 'package:flutky/pubky/z32.dart';
 
 Future<void> main(List<String> args) async {
-  final flow = await GrantAuthFlow.begin();
+  // Second argument: the capabilities to ask for. Lets one run check what
+  // Ring actually shows when an app asks for more than its own namespace.
+  final flow = await GrantAuthFlow.begin(
+    capabilities: args.length > 1 ? args[1] : flutkyCapabilities,
+  );
 
   stdout
     ..writeln('--- demande d\'autorisation -----------------------------------')
