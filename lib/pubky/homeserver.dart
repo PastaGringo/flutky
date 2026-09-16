@@ -6,17 +6,13 @@ import 'package:http/http.dart' as http;
 import 'blake3.dart';
 import 'cookie_auth.dart';
 import 'crockford.dart';
+import 'endpoints.dart';
 import 'grant_auth.dart';
 import 'ring_session.dart';
+
+export 'endpoints.dart' show homeserverBase, homeserverPublicKey;
 import 'tags.dart';
 
-/// The homeserver this proof of concept writes to.
-///
-/// Resolving a user's own homeserver means decoding a signed pkarr packet
-/// (a DNS message behind 64 bytes of signature), which this POC does not carry.
-/// Everyone Nexus indexes today is on the official one; an account hosted
-/// elsewhere gets a clear error rather than a silent failure.
-const homeserverBase = 'https://homeserver.pubky.app';
 
 /// Longest `short` post pubky-app-specs accepts. Enforced here so the refusal
 /// happens under the text field rather than as an opaque 4xx.

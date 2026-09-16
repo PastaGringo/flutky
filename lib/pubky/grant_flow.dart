@@ -42,11 +42,10 @@ import 'package:pinenacl/api.dart' show ByteList;
 import 'package:pinenacl/x25519.dart' as nacl;
 
 import 'blake3.dart';
+import 'endpoints.dart';
 import 'z32.dart';
 
-/// The relay pubky.app itself uses, read from its served page rather than from
-/// a guess. Note the `/inbox` path: the host alone answers 404.
-const defaultAuthRelay = 'https://httprelay.pubky.app/inbox';
+export 'endpoints.dart' show defaultAuthRelay;
 
 /// What the app calls itself in the authorization screen. Ring shows it to the
 /// person approving, and the homeserver binds the grant to it.
@@ -188,6 +187,16 @@ class GrantAuthFlow {
       return null;
     }
   }
+
+  /// The Ed25519 seed of the client key, for signing the proof of possession.
+  ///
+  /// Distinct from [clientSecret], and the distinction matters: pubky-core
+  /// generates the relay secret and the client signer independently
+  /// (`client_secret: random_bytes::<32>()` beside `client_signer`). Signing a
+  /// proof with the relay secret would produce a well-formed JWS that the
+  /// homeserver refuses, because it would not match the key in the grant's
+  /// `cnf`.
+  Future<List<int>> clientSeed() => clientKeyPair.extractPrivateKeyBytes();
 
   void close() => _http.close();
 }
