@@ -31,6 +31,11 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+# Gradle écrit ses rapports dans android/build/, que la règle ancrée ci-dessus
+# ne couvre pas : un rapport de 663 lignes s'est retrouvé dans un commit.
+android/build/
+android/app/build/
+android/.gradle/
 /coverage/
 
 # Symbolication related
